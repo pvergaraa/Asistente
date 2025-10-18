@@ -55,8 +55,8 @@
         font-weight: bold;
     }
 </style>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
 <script>
@@ -136,37 +136,24 @@
     // ----------------------------------------------------------------------
     // ⚙️ CONFIGURACIÓN E INICIALIZACIÓN DE FIREBASE ⚙️
     // ----------------------------------------------------------------------
-
-// Import the functions you need from the SDKs you need
-import { initializeApp } from "firebase/app";
-// TODO: Add SDKs for Firebase products that you want to use
-// https://firebase.google.com/docs/web/setup#available-libraries
-
-// Your web app's Firebase configuration
-const firebaseConfig = {
-  apiKey: "AIzaSyAh1g7i3vI37nSQYkUi1gSKstRvLIrCVOY",
-  authDomain: "asistenteweb-d1a36.firebaseapp.com",
-  projectId: "asistenteweb-d1a36",
-  storageBucket: "asistenteweb-d1a36.firebasestorage.app",
-  messagingSenderId: "300972571463",
-  appId: "1:300972571463:web:b2259fb2eac4b7bae12a62"
-};
-
-// Initialize Firebase
-const app = initializeApp(firebaseConfig);
-
-    // Colección y Documento Fijo (usando un ID único para tu asistente)
-    const COLLECTION_NAME = "users";
-    const DOCUMENT_ID = "asistente_master_tasks"; // ID único para tu data
-    // Si quieres usar el ID del proyecto, puedes usar: const DOCUMENT_ID = "asistenteweb";
-
-    // Importar funciones de Firebase V9
-    const { initializeApp } = firebase.app;
-    const { getFirestore, doc, getDoc, setDoc } = firebase.firestore;
     
-    // Inicializar Firebase
-    const app = initializeApp(firebaseConfig);
-    const db = getFirestore(app);
+    // 🚨 REEMPLAZA ESTO con tu propia configuración de Firebase 🚨
+    const firebaseConfig = {
+        apiKey: "TU_API_KEY", 
+        authDomain: "TU_PROJECT_ID.firebaseapp.com",
+        projectId: "TU_PROJECT_ID", // Ejemplo: "asistenteweb"
+        storageBucket: "TU_PROJECT_ID.appspot.com",
+        messagingSenderId: "TU_SENDER_ID",
+        appId: "TU_APP_ID"
+    };
+
+    // Colección y Documento Fijo para todas las tareas
+    const COLLECTION_NAME = "users";
+    const DOCUMENT_ID = "asistente_master_tasks"; // ID único
+
+    // Inicializar Firebase (Usa firebase.initializeApp() directamente)
+    const app = firebase.initializeApp(firebaseConfig);
+    const db = app.firestore(); // Usa app.firestore() para acceder a Firestore
 
     // ----------------------------------------------------------------------
     // ☁️ FUNCIONES DE SINCRONIZACIÓN EN LA NUBE CON FIREBASE ☁️
@@ -179,8 +166,8 @@ const app = initializeApp(firebaseConfig);
     async function saveTasksToCloud() {
         try {
             statusMessage.innerText = "Guardando...";
-            // Guarda todo el array 'tasks' en un único documento
-            await setDoc(doc(db, COLLECTION_NAME, DOCUMENT_ID), { tasks });
+            // Usa set() del SDK compatible
+            await db.collection(COLLECTION_NAME).doc(DOCUMENT_ID).set({ tasks });
             console.log("Tareas guardadas en Firebase.");
             statusMessage.innerText = "Guardado en la nube.";
         } catch (e) {
@@ -193,10 +180,10 @@ const app = initializeApp(firebaseConfig);
     async function loadTasksFromCloud() {
         try {
             statusMessage.innerText = "Cargando...";
-            const docRef = doc(db, COLLECTION_NAME, DOCUMENT_ID);
-            const docSnap = await getDoc(docRef);
+            // Usa get() del SDK compatible
+            const docSnap = await db.collection(COLLECTION_NAME).doc(DOCUMENT_ID).get();
 
-            if (docSnap.exists()) {
+            if (docSnap.exists) {
                 // Si el documento existe, carga el array 'tasks'
                 tasks = docSnap.data().tasks || []; 
                 statusMessage.innerText = "Cargado desde la nube.";
@@ -222,7 +209,7 @@ const app = initializeApp(firebaseConfig);
     }
     
     // ----------------------------------------------------------------------
-    // ---- RESTO DE FUNCIONES (El código de la lógica de la app) ----
+    // ---- RESTO DE FUNCIONES ----
     // ----------------------------------------------------------------------
     
     function addTask(text = null) {
