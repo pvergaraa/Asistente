@@ -1,0 +1,418 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8"/>
+<title>Asistente Diario - Tareas y Calendario Semanal</title>
+<style>
+    /* MODIFICACIÓN AQUÍ */
+    body { 
+        font-family: Arial, sans-serif; 
+        margin: 20px auto; /* Centra el contenido horizontalmente y añade margen vertical */
+        background: #f4f4f4; 
+        max-width: 1200px; /* Ancho máximo para dejar bordes laterales en pantallas grandes */
+        padding: 0 20px; /* Pequeño relleno para evitar que el contenido toque los bordes laterales */
+    }
+    
+    h1 { color: #333; }
+    .section { margin-bottom: 30px; background: #fff; padding: 20px; border-radius: 8px; }
+    input, textarea, select { margin: 5px 0; padding: 8px; width: 100%; }
+    button { padding: 10px 15px; margin: 5px 5px 0 0; border: none; border-radius: 5px; cursor: pointer; background: #1976d2; color: white; }
+    button:hover { opacity: 0.9; }
+    ul { list-style-type: none; padding: 0; }
+    li { 
+        margin: 5px 0; 
+        padding: 5px; 
+        background: #eaeaea; 
+        border-radius: 5px; 
+        cursor: pointer; 
+        white-space: normal; 
+    }
+    .completed { text-decoration: line-through; color: gray; }
+    .calendar { display: grid; grid-template-columns: repeat(5, 1fr); gap: 5px; } 
+    .day { background: #ddd; padding: 10px; border-radius: 5px; min-height: 60px; }
+    
+    .current-day {
+        background-color: #b0b0b0 !important;
+        border: 2px solid #555;
+    }
+    
+    .stats { font-weight: bold; margin-top: 10px; }
+    
+    .task-buttons { 
+        display: flex; 
+        gap: 10px; 
+        flex-wrap: wrap; 
+        margin-top: 10px; 
+        align-items: flex-start;
+        justify-content: space-between; 
+    }
+    #deleteBtn {
+        margin-left: auto; 
+    }
+    
+    .urgent-tag {
+        color: red;
+        font-weight: bold;
+    }
+</style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+<script>
+    function mostrarFechaHora() {
+        const ahora = new Date();
+        const opciones = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+        const fecha = ahora.toLocaleDateString('es-ES', opciones);
+        const hora = ahora.toLocaleTimeString('es-ES');
+        document.getElementById("fecha-hora").innerHTML = `${fecha} - ${hora}`;
+    }
+    setInterval(mostrarFechaHora, 1000);
+</script>
+</head>
+<body>
+<h1>🗓️ Asistente Diario - PVergaraA</h1>
+    
+    <p id="fecha-hora"></p>
+
+<div class="section">
+    <h2>✅ Tareas</h2>
+    <input id="taskInput" placeholder="Escribe una tarea..." type="text"/>
+    <select id="taskTag">
+        <option value="">Etiqueta</option>
+        <option value="Urgente">Urgente</option>
+        <option value="Reunión">Reunión</option>
+        <option value="Pendiente">Pendiente</option>
+    </select>
+    <input id="taskDate" type="date"/>
+    
+    <div class="task-buttons">
+        <div>
+            <button onclick="addTask()">Agregar tarea</button>
+            <button onclick="startDictation()">🎙️ Comenzar dictado</button>
+            <button onclick="exportTasks()">Exportar tareas</button>
+        </div>
+        <button id="deleteBtn" style="background:#d32f2f" onclick="deleteCompletedTasks()">🗑️ Borrar tareas completadas</button>
+    </div>
+    
+    <p id="recordingTimer" style="margin-top: 10px;">⏱️ Tiempo de grabación: 0 segundos</p>
+
+    <ul id="taskList"></ul>
+    <p class="stats" id="taskStats"></p>
+</div>
+
+<section id="buscador" class="section">
+  <h2 class="text-xl font-semibold mb-2">Buscar tareas</h2>
+  <div class="flex items-center gap-2">
+    <input
+      type="text"
+      id="searchInput"
+      placeholder="Escribe para buscar..."
+      class="flex-1 border p-2 rounded"
+    />
+    <button
+      id="searchBtn"
+      class="bg-blue-500 hover:bg-blue-600 text-white px-3 py-2 rounded"
+    >
+      Buscar
+    </button>
+    <button
+      id="clearSearchBtn"
+      class="bg-gray-400 hover:bg-gray-500 text-white px-3 py-2 rounded"
+    >
+      Limpiar
+    </button>
+  </div>
+  <div id="searchResults" class="mt-4"></div>
+</section>
+
+<div class="section">
+    <h2>📅 Calendario de tareas</h2>
+    <div class="calendar" id="calendarView"></div>
+</div>
+
+<script>
+    let tasks = JSON.parse(localStorage.getItem('tasks') || '[]');
+
+    function saveData() {
+        localStorage.setItem('tasks', JSON.stringify(tasks));
+    }
+    
+    // ---- TAREAS ----
+    function addTask(text = null) {
+        const taskInput = document.getElementById('taskInput');
+        const taskDateInput = document.getElementById('taskDate'); 
+        
+        const taskText = text || taskInput.value;
+        const tag = document.getElementById('taskTag').value;
+        const date = taskDateInput.value; 
+        
+        if (taskText.trim()) {
+            tasks.push({ text: taskText.trim(), tag, date, done: false });
+            saveData();
+            
+            if (!text) { 
+                 taskInput.value = '';
+            }
+            taskDateInput.value = '';
+            
+            renderTasks();
+            renderCalendar();
+        }
+    }
+
+    function toggleTask(index) {
+        tasks[index].done = !tasks[index].done;
+        saveData();
+        renderTasks();
+        renderCalendar();
+    }
+
+    function deleteCompletedTasks() {
+        tasks = tasks.filter(t => !t.done);
+        saveData();
+        renderTasks();
+        renderCalendar();
+    }
+
+    // ---- RENDER TASKS (Con orden inverso y numeración) ----
+    function renderTasks() {
+        const list = document.getElementById('taskList');
+        list.innerHTML = '';
+        
+        const totalTasks = tasks.length;
+        const reversedTasks = [...tasks].reverse();
+
+        reversedTasks.forEach((task, i) => {
+            const originalIndex = totalTasks - 1 - i; 
+            const taskNumber = i + 1; 
+
+            const li = document.createElement('li');
+            li.className = task.done ? 'completed' : '';
+            li.onclick = () => toggleTask(originalIndex);
+            
+            const tagText = task.tag || 'Sin etiqueta';
+            let styledTag = tagText;
+
+            if (tagText === 'Urgente') {
+                styledTag = `<span class="urgent-tag">${tagText}</span>`;
+            }
+
+            li.innerHTML = `${taskNumber}. ${task.text} (${styledTag}) - ${task.date || 'Sin fecha'}`;
+            
+            list.appendChild(li);
+        });
+        
+        const completed = tasks.filter(t => t.done).length;
+        document.getElementById('taskStats').innerText = `Completadas: ${completed} / Pendientes: ${totalTasks - completed}`;
+    }
+    
+    // ---- EXPORTAR TAREAS (A PDF con jsPDF) ----
+    function exportTasks() {
+        if (tasks.length === 0) {
+            alert("No hay tareas para exportar.");
+            return;
+        }
+        
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF();
+        
+        let y = 10; 
+        const lineHeight = 7;
+        const pageWidth = doc.internal.pageSize.getWidth();
+        const margin = 10;
+        
+        const title = "REPORTE DE TAREAS ASISTENTE DIARIO";
+        doc.setFontSize(16);
+        doc.text(title, pageWidth / 2, y, { align: 'center' });
+        y += lineHeight * 2;
+        
+        doc.setFontSize(10);
+        doc.setFont(doc.getFont().fontName, 'normal');
+
+        tasks.forEach((t, index) => {
+            const status = t.done ? '[COMPLETADA]' : '[PENDIENTE]';
+            const tag = t.tag ? ` | Etiqueta: ${t.tag}` : '';
+            const date = t.date ? ` | Fecha: ${t.date}` : '';
+            
+            const color = t.done ? [128, 128, 128] : [0, 0, 0]; 
+            doc.setTextColor(...color);
+
+            const textLine = `${index + 1}. ${status} ${t.text}${tag}${date}`;
+            
+            if (y + lineHeight > doc.internal.pageSize.getHeight() - margin) {
+                doc.addPage();
+                y = margin; 
+            }
+            
+            doc.text(textLine, margin, y);
+            y += lineHeight;
+        });
+
+        doc.save("Reporte_Tareas_" + new Date().toISOString().slice(0, 10) + ".pdf");
+    }
+
+    // ---- DICTADO ----
+    let recordingInterval;
+    let recordingSeconds = 0;
+
+    function startDictation() {
+        if (!('SpeechRecognition' in window) && !('webkitSpeechRecognition' in window)) {
+            alert('El reconocimiento de voz no está soportado por tu navegador. Prueba con Chrome o Edge.');
+            return;
+        }
+        
+        const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
+        recognition.lang = 'es-ES';
+        recognition.interimResults = false; 
+        
+        recognition.onstart = function() {
+            recordingSeconds = 0;
+            document.getElementById('recordingTimer').innerText = "🎙️ ESCUCHANDO... (0 segundos)";
+            recordingInterval = setInterval(() => {
+                recordingSeconds++;
+                document.getElementById('recordingTimer').innerText = `🎙️ ESCUCHANDO... (${recordingSeconds} segundos)`;
+            }, 1000);
+        };
+        
+        recognition.onresult = function(event) {
+            const transcript = event.results[0][0].transcript;
+            addTask("🗣️ TAREA DICTADA: " + transcript); 
+        };
+        
+        recognition.onerror = function(event) { 
+            clearInterval(recordingInterval); 
+            document.getElementById('recordingTimer').innerText = `❌ Error en el dictado: ${event.error}`;
+        };
+        
+        recognition.onend = function() { 
+            clearInterval(recordingInterval); 
+            document.getElementById('recordingTimer').innerText = `⏱️ Dictado finalizado. ${recordingSeconds} segundos`;
+        };
+
+        try {
+             recognition.start();
+        } catch(e) {
+             clearInterval(recordingInterval); 
+             document.getElementById('recordingTimer').innerText = "Error al iniciar el dictado. Es posible que ya esté activo.";
+        }
+    }
+
+    // ---- CALENDARIO (MODIFICADO: Resalta el día actual) ----
+    function renderCalendar() {
+        const calendar = document.getElementById('calendarView');
+        calendar.innerHTML = '';
+        const today = new Date();
+        const year = today.getFullYear();
+        const month = today.getMonth();
+        const daysInMonth = new Date(year, month + 1, 0).getDate();
+        
+        const todayStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+        
+        const dayNames = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes'];
+        
+        calendar.style.gridTemplateColumns = 'repeat(5, 1fr)'; 
+
+        dayNames.forEach(name => {
+            const header = document.createElement('div');
+            header.className = 'day-header';
+            header.style.fontWeight = 'bold';
+            header.style.textAlign = 'center';
+            header.innerText = name; 
+            calendar.appendChild(header);
+        });
+
+        let firstDayOfMonth = new Date(year, month, 1).getDay(); 
+        
+        if (firstDayOfMonth >= 1 && firstDayOfMonth <= 5) {
+            for (let i = 1; i < firstDayOfMonth; i++) {
+                const emptyDay = document.createElement('div');
+                emptyDay.className = 'day';
+                emptyDay.style.background = '#f4f4f4';
+                emptyDay.style.border = 'none';
+                calendar.appendChild(emptyDay);
+            }
+        }
+        
+
+        for (let d = 1; d <= daysInMonth; d++) {
+            const dateObj = new Date(year, month, d);
+            const dayOfWeek = dateObj.getDay(); 
+            
+            if (dayOfWeek === 0 || dayOfWeek === 6) { 
+                continue; 
+            }
+
+            const monthStr = String(month + 1).padStart(2, '0');
+            const dayStr = String(d).padStart(2, '0');
+            const dateStr = `${year}-${monthStr}-${dayStr}`;
+            
+            const dayDiv = document.createElement('div');
+            dayDiv.className = 'day';
+
+            if (dateStr === todayStr) {
+                dayDiv.classList.add('current-day');
+            }
+
+            const dayNameShort = dayNames[dayOfWeek - 1].substring(0, 3);
+            dayDiv.innerHTML = `<strong>${dayNameShort} ${d}</strong><br>`;
+            
+            tasks.filter(t => t.date === dateStr).forEach(t => {
+                const p = document.createElement('p');
+                p.innerText = t.text;
+                p.style.fontSize = '12px';
+                p.style.color = t.done ? 'gray' : '#333';
+                p.style.textDecoration = t.done ? 'line-through' : 'none';
+                dayDiv.appendChild(p);
+            });
+            calendar.appendChild(dayDiv);
+        }
+    }
+
+    // ---- BÚSQUEDA ----
+    function searchItems() {
+        const query = document.getElementById('searchInput').value.toLowerCase();
+        const results = document.getElementById('searchResults');
+        results.innerHTML = '';
+        
+        if (query.trim() === "") {
+            results.innerHTML = '<p>Por favor, ingrese un término de búsqueda.</p>';
+            return;
+        }
+
+        const foundTasks = tasks.filter(t => 
+            t.text.toLowerCase().includes(query) || 
+            (t.tag && t.tag.toLowerCase().includes(query))
+        );
+        
+        if (foundTasks.length > 0) {
+            foundTasks.forEach(t => {
+                const li = document.createElement('li');
+                li.innerText = `TAREA: ${t.text} (${t.tag || 'Sin etiqueta'}) - ${t.date || 'Sin fecha'}`;
+                li.className = t.done ? 'completed' : '';
+                results.appendChild(li);
+            });
+        } else {
+            results.innerHTML = '<p>No se encontraron tareas con ese criterio.</p>';
+        }
+    }
+    
+    // ---- MANEJO DEL BUSCADOR ----
+    const searchInput = document.getElementById("searchInput");
+    const searchResults = document.getElementById("searchResults");
+    const clearSearchBtn = document.getElementById("clearSearchBtn");
+    const searchBtn = document.getElementById('searchBtn');
+
+    searchBtn.addEventListener('click', searchItems);
+
+    clearSearchBtn.addEventListener("click", () => {
+      searchInput.value = "";
+      searchResults.innerHTML = "";
+      renderTasks(); 
+      renderCalendar();
+    });
+
+    // ---- Inicialización ----
+    renderTasks();
+    renderCalendar();
+</script>
+</body>
+</html>
