@@ -134,26 +134,26 @@
 
 <script>
     // ----------------------------------------------------------------------
-    // ⚙️ CONFIGURACIÓN E INICIALIZACIÓN DE FIREBASE ⚙️
+    // ⚙️ CONFIGURACIÓN E INICIALIZACIÓN DE FIREBASE (TUS DATOS REALES) ⚙️
     // ----------------------------------------------------------------------
     
-    // 🚨 REEMPLAZA ESTO con tu propia configuración de Firebase 🚨
+    // TUS CREDENCIALES
     const firebaseConfig = {
-        apiKey: "TU_API_KEY", 
-        authDomain: "TU_PROJECT_ID.firebaseapp.com",
-        projectId: "TU_PROJECT_ID", // Ejemplo: "asistenteweb"
-        storageBucket: "TU_PROJECT_ID.appspot.com",
-        messagingSenderId: "TU_SENDER_ID",
-        appId: "TU_APP_ID"
+        apiKey: "AIzaSyAh1g7i3vI37nSQYkUi1gSKstRvLIrCVOY",
+        authDomain: "asistenteweb-d1a36.firebaseapp.com",
+        projectId: "asistenteweb-d1a36",
+        storageBucket: "asistenteweb-d1a36.firebasestorage.app",
+        messagingSenderId: "300972571463",
+        appId: "1:300972571463:web:b2259fb2eac4b7bae12a62"
     };
 
-    // Colección y Documento Fijo para todas las tareas
+    // Colección y Documento Fijo para todas las tareas (Rutas de la base de datos)
     const COLLECTION_NAME = "users";
-    const DOCUMENT_ID = "asistente_master_tasks"; // ID único
+    const DOCUMENT_ID = "asistente_master_tasks"; 
 
-    // Inicializar Firebase (Usa firebase.initializeApp() directamente)
+    // Inicializar Firebase con el SDK de compatibilidad (V8 style)
     const app = firebase.initializeApp(firebaseConfig);
-    const db = app.firestore(); // Usa app.firestore() para acceder a Firestore
+    const db = app.firestore(); 
 
     // ----------------------------------------------------------------------
     // ☁️ FUNCIONES DE SINCRONIZACIÓN EN LA NUBE CON FIREBASE ☁️
@@ -195,7 +195,8 @@
         } catch (e) {
             console.error("Error al cargar desde la nube: ", e);
             tasks = [];
-            statusMessage.innerText = `🚨 Error de conexión/reglas de Firebase: ${e.code || e.message}`;
+            // Este es el error de reglas/conexión.
+            statusMessage.innerText = `🚨 Error de conexión/reglas de Firebase: ${e.code || e.message}. Verifica tus Reglas de Seguridad de Firestore.`;
         }
         
         // Renderizar siempre después de intentar cargar
@@ -209,7 +210,7 @@
     }
     
     // ----------------------------------------------------------------------
-    // ---- RESTO DE FUNCIONES ----
+    // ---- RESTO DE FUNCIONES (Lógica de la app) ----
     // ----------------------------------------------------------------------
     
     function addTask(text = null) {
@@ -393,14 +394,19 @@
 
         let firstDayOfMonth = new Date(year, month, 1).getDay(); 
         
-        if (firstDayOfMonth >= 1 && firstDayOfMonth <= 5) {
-            for (let i = 1; i < firstDayOfMonth; i++) {
-                const emptyDay = document.createElement('div');
-                emptyDay.className = 'day';
-                emptyDay.style.background = '#f4f4f4';
-                emptyDay.style.border = 'none';
-                calendar.appendChild(emptyDay);
-            }
+        // Ajusta firstDayOfMonth para que 1 sea Lunes y 5 sea Viernes
+        if (firstDayOfMonth === 0) firstDayOfMonth = 7; // Domingo
+        if (firstDayOfMonth > 5) { // Sábado o Domingo
+            firstDayOfMonth = 1; // Para el renderizado, empezamos el lunes
+        }
+
+        // Rellenar días vacíos antes del primer día del mes (solo Lun-Vie)
+        for (let i = 1; i < firstDayOfMonth; i++) {
+            const emptyDay = document.createElement('div');
+            emptyDay.className = 'day';
+            emptyDay.style.background = '#f4f4f4';
+            emptyDay.style.border = 'none';
+            calendar.appendChild(emptyDay);
         }
         
 
@@ -423,7 +429,8 @@
                 dayDiv.classList.add('current-day');
             }
 
-            const dayNameShort = dayNames[dayOfWeek - 1].substring(0, 3);
+            const dayNameIndex = dayOfWeek === 0 ? 6 : dayOfWeek - 1; // 1=Lun, 5=Vie
+            const dayNameShort = dayNames[dayNameIndex] ? dayNames[dayNameIndex].substring(0, 3) : ''; 
             dayDiv.innerHTML = `<strong>${dayNameShort} ${d}</strong><br>`;
             
             tasks.filter(t => t.date === dateStr).forEach(t => {
