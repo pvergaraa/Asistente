@@ -2,15 +2,15 @@
 <html lang="es">
 <head>
 <meta charset="utf-8"/>
-<title>Asistente Diario - Tareas y Calendario Semanal</title>
+<title>Asistente Diario - Asistente Sincronizado con Firebase</title>
 <style>
-    /* MODIFICACIÓN AQUÍ */
+    /* Diseño Centrado */
     body { 
         font-family: Arial, sans-serif; 
-        margin: 20px auto; /* Centra el contenido horizontalmente y añade margen vertical */
+        margin: 20px auto; 
         background: #f4f4f4; 
-        max-width: 1200px; /* Ancho máximo para dejar bordes laterales en pantallas grandes */
-        padding: 0 20px; /* Pequeño relleno para evitar que el contenido toque los bordes laterales */
+        max-width: 1200px; 
+        padding: 0 20px; 
     }
     
     h1 { color: #333; }
@@ -55,6 +55,8 @@
         font-weight: bold;
     }
 </style>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
 <script>
@@ -94,6 +96,7 @@
     </div>
     
     <p id="recordingTimer" style="margin-top: 10px;">⏱️ Tiempo de grabación: 0 segundos</p>
+    <p id="statusMessage" style="color: blue;">Cargando...</p>
 
     <ul id="taskList"></ul>
     <p class="stats" id="taskStats"></p>
@@ -130,13 +133,98 @@
 </div>
 
 <script>
-    let tasks = JSON.parse(localStorage.getItem('tasks') || '[]');
+    // ----------------------------------------------------------------------
+    // ⚙️ CONFIGURACIÓN E INICIALIZACIÓN DE FIREBASE ⚙️
+    // ----------------------------------------------------------------------
 
-    function saveData() {
-        localStorage.setItem('tasks', JSON.stringify(tasks));
+// Import the functions you need from the SDKs you need
+import { initializeApp } from "firebase/app";
+// TODO: Add SDKs for Firebase products that you want to use
+// https://firebase.google.com/docs/web/setup#available-libraries
+
+// Your web app's Firebase configuration
+const firebaseConfig = {
+  apiKey: "AIzaSyAh1g7i3vI37nSQYkUi1gSKstRvLIrCVOY",
+  authDomain: "asistenteweb-d1a36.firebaseapp.com",
+  projectId: "asistenteweb-d1a36",
+  storageBucket: "asistenteweb-d1a36.firebasestorage.app",
+  messagingSenderId: "300972571463",
+  appId: "1:300972571463:web:b2259fb2eac4b7bae12a62"
+};
+
+// Initialize Firebase
+const app = initializeApp(firebaseConfig);
+
+    // Colección y Documento Fijo (usando un ID único para tu asistente)
+    const COLLECTION_NAME = "users";
+    const DOCUMENT_ID = "asistente_master_tasks"; // ID único para tu data
+    // Si quieres usar el ID del proyecto, puedes usar: const DOCUMENT_ID = "asistenteweb";
+
+    // Importar funciones de Firebase V9
+    const { initializeApp } = firebase.app;
+    const { getFirestore, doc, getDoc, setDoc } = firebase.firestore;
+    
+    // Inicializar Firebase
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+
+    // ----------------------------------------------------------------------
+    // ☁️ FUNCIONES DE SINCRONIZACIÓN EN LA NUBE CON FIREBASE ☁️
+    // ----------------------------------------------------------------------
+
+    let tasks = []; 
+    const statusMessage = document.getElementById('statusMessage');
+
+    // Función para guardar 'tasks' en Firebase
+    async function saveTasksToCloud() {
+        try {
+            statusMessage.innerText = "Guardando...";
+            // Guarda todo el array 'tasks' en un único documento
+            await setDoc(doc(db, COLLECTION_NAME, DOCUMENT_ID), { tasks });
+            console.log("Tareas guardadas en Firebase.");
+            statusMessage.innerText = "Guardado en la nube.";
+        } catch (e) {
+            console.error("Error al guardar en la nube: ", e);
+            statusMessage.innerText = `🚨 Error al guardar en Firebase: ${e.code || e.message}`;
+        }
+    }
+
+    // Función para cargar 'tasks' desde Firebase
+    async function loadTasksFromCloud() {
+        try {
+            statusMessage.innerText = "Cargando...";
+            const docRef = doc(db, COLLECTION_NAME, DOCUMENT_ID);
+            const docSnap = await getDoc(docRef);
+
+            if (docSnap.exists()) {
+                // Si el documento existe, carga el array 'tasks'
+                tasks = docSnap.data().tasks || []; 
+                statusMessage.innerText = "Cargado desde la nube.";
+            } else {
+                console.log("No se encontró el documento de tareas. Inicializando vacío.");
+                tasks = []; // Inicializa vacío si no hay datos
+                statusMessage.innerText = "Listo (datos iniciales).";
+            }
+        } catch (e) {
+            console.error("Error al cargar desde la nube: ", e);
+            tasks = [];
+            statusMessage.innerText = `🚨 Error de conexión/reglas de Firebase: ${e.code || e.message}`;
+        }
+        
+        // Renderizar siempre después de intentar cargar
+        renderTasks();
+        renderCalendar();
     }
     
-    // ---- TAREAS ----
+    // Función central que se llama después de cada modificación
+    function saveData() {
+        saveTasksToCloud(); 
+    }
+    
+    // ----------------------------------------------------------------------
+    // ---- RESTO DE FUNCIONES (El código de la lógica de la app) ----
+    // ----------------------------------------------------------------------
+    
     function addTask(text = null) {
         const taskInput = document.getElementById('taskInput');
         const taskDateInput = document.getElementById('taskDate'); 
@@ -173,13 +261,12 @@
         renderCalendar();
     }
 
-    // ---- RENDER TASKS (Con orden inverso y numeración) ----
     function renderTasks() {
         const list = document.getElementById('taskList');
         list.innerHTML = '';
         
         const totalTasks = tasks.length;
-        const reversedTasks = [...tasks].reverse();
+        const reversedTasks = [...tasks].reverse(); 
 
         reversedTasks.forEach((task, i) => {
             const originalIndex = totalTasks - 1 - i; 
@@ -187,7 +274,7 @@
 
             const li = document.createElement('li');
             li.className = task.done ? 'completed' : '';
-            li.onclick = () => toggleTask(originalIndex);
+            li.onclick = () => toggleTask(originalIndex); 
             
             const tagText = task.tag || 'Sin etiqueta';
             let styledTag = tagText;
@@ -205,7 +292,6 @@
         document.getElementById('taskStats').innerText = `Completadas: ${completed} / Pendientes: ${totalTasks - completed}`;
     }
     
-    // ---- EXPORTAR TAREAS (A PDF con jsPDF) ----
     function exportTasks() {
         if (tasks.length === 0) {
             alert("No hay tareas para exportar.");
@@ -250,7 +336,6 @@
         doc.save("Reporte_Tareas_" + new Date().toISOString().slice(0, 10) + ".pdf");
     }
 
-    // ---- DICTADO ----
     let recordingInterval;
     let recordingSeconds = 0;
 
@@ -296,7 +381,6 @@
         }
     }
 
-    // ---- CALENDARIO (MODIFICADO: Resalta el día actual) ----
     function renderCalendar() {
         const calendar = document.getElementById('calendarView');
         calendar.innerHTML = '';
@@ -367,7 +451,6 @@
         }
     }
 
-    // ---- BÚSQUEDA ----
     function searchItems() {
         const query = document.getElementById('searchInput').value.toLowerCase();
         const results = document.getElementById('searchResults');
@@ -406,13 +489,11 @@
     clearSearchBtn.addEventListener("click", () => {
       searchInput.value = "";
       searchResults.innerHTML = "";
-      renderTasks(); 
-      renderCalendar();
+      loadTasksFromCloud(); 
     });
 
     // ---- Inicialización ----
-    renderTasks();
-    renderCalendar();
+    loadTasksFromCloud();
 </script>
 </body>
 </html>
