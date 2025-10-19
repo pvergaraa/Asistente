@@ -16,8 +16,22 @@
     h1 { color: #333; }
     .section { margin-bottom: 30px; background: #fff; padding: 20px; border-radius: 8px; }
     input, textarea, select { margin: 5px 0; padding: 8px; width: 100%; }
+    /* Estilo para el botón de Google */
+    .google-btn { 
+        padding: 10px 15px; 
+        margin: 5px 5px 0 0; 
+        border: none; 
+        border-radius: 5px; 
+        cursor: pointer; 
+        background: #db4437; /* Rojo de Google */
+        color: white; 
+        font-weight: bold;
+    }
+    .google-btn:hover { opacity: 0.9; }
+    /* Estilo para los botones generales (Agregar Tarea, Exportar, etc.) */
     button { padding: 10px 15px; margin: 5px 5px 0 0; border: none; border-radius: 5px; cursor: pointer; background: #1976d2; color: white; }
     button:hover { opacity: 0.9; }
+    
     ul { list-style-type: none; padding: 0; }
     li { 
         margin: 5px 0; 
@@ -78,9 +92,12 @@
 
 <div id="loginSection" class="section" style="max-width: 400px; margin: 50px auto; display: block;">
     <h2>🔒 Iniciar Sesión</h2>
-    <input id="emailInput" placeholder="Correo electrónico" type="email"/>
-    <input id="passwordInput" placeholder="Contraseña" type="password"/>
-    <button onclick="handleLogin()">Ingresar</button>
+    <p>Usa tu cuenta de Google (la misma que usas en Firebase) para acceder.</p>
+    
+    <button onclick="handleLogin()" class="google-btn">
+        🚀 Iniciar Sesión con Google
+    </button>
+    
     <p id="authMessage" style="color:red; margin-top:10px;"></p>
 </div>
 <div id="mainContent" style="display: none;">
@@ -166,7 +183,7 @@
     // Inicializar Firebase con el SDK de compatibilidad (V8 style)
     const app = firebase.initializeApp(firebaseConfig);
     const db = app.firestore(); 
-    const auth = app.auth(); // <-- INICIALIZACIÓN DE AUTH
+    const auth = app.auth(); // INICIALIZACIÓN DE AUTH
 
     // ----------------------------------------------------------------------
     // 🔒 FUNCIONES DE AUTENTICACIÓN Y CONTROL DE VISTA 🔒
@@ -175,20 +192,20 @@
     const mainContent = document.getElementById('mainContent');
     const authMessage = document.getElementById('authMessage');
 
+    // FUNCIÓN DE INICIO DE SESIÓN CON GOOGLE
     function handleLogin() {
-        const email = document.getElementById('emailInput').value;
-        const password = document.getElementById('passwordInput').value;
+        const provider = new firebase.auth.GoogleAuthProvider();
         
-        auth.signInWithEmailAndPassword(email, password)
+        // Inicia el flujo de autenticación de Google con una ventana emergente
+        auth.signInWithPopup(provider)
             .catch((error) => {
-                // Muestra un mensaje de error al usuario
-                authMessage.innerText = `Error de ingreso: ${error.message}`;
+                // Muestra un mensaje de error si el usuario cancela o hay un problema
+                authMessage.innerText = `Error de ingreso con Google: ${error.message}`;
             });
     }
 
     function logout() {
         auth.signOut().then(() => {
-            // No hacemos nada aquí, el onAuthStateChanged se encarga de ocultar la vista
             console.log("Sesión cerrada.");
         }).catch((error) => {
             console.error("Error al cerrar sesión: ", error);
@@ -225,13 +242,13 @@
     // Función para guardar 'tasks' en Firebase
     async function saveTasksToCloud() {
         if (!auth.currentUser) {
-            // Evita guardar si no hay nadie logueado (aunque las reglas de Firestore ya lo harían)
             statusMessage.innerText = "🚨 Error: Debes iniciar sesión para guardar.";
             return;
         }
         
         try {
             statusMessage.innerText = "Guardando...";
+            // Guardamos el array 'tasks' en el documento fijo
             await db.collection(COLLECTION_NAME).doc(DOCUMENT_ID).set({ tasks });
             console.log("Tareas guardadas en Firebase.");
             statusMessage.innerText = "Guardado en la nube.";
@@ -244,7 +261,6 @@
     // Función para cargar 'tasks' desde Firebase
     async function loadTasksFromCloud() {
         if (!auth.currentUser) {
-            // Evita intentar cargar si no hay sesión
             return;
         }
         
@@ -278,9 +294,6 @@
     // ---- RESTO DE FUNCIONES (Tu lógica de la app) ----
     // ----------------------------------------------------------------------
     
-    // NOTA: El resto de funciones (addTask, toggleTask, deleteCompletedTasks, etc.)
-    // YA llaman a saveData(), que ahora es saveTasksToCloud(), lo cual es correcto.
-
     function addTask(text = null) {
         const taskInput = document.getElementById('taskInput');
         const taskDateInput = document.getElementById('taskDate'); 
@@ -548,14 +561,10 @@
     clearSearchBtn.addEventListener("click", () => {
       searchInput.value = "";
       searchResults.innerHTML = "";
-      // Cuando no hay login, el onAuthStateChanged limpiará las tareas
       if(auth.currentUser) { 
         loadTasksFromCloud(); 
       }
     });
-
-    // La inicialización loadTasksFromCloud() ha sido eliminada de aquí
-    // y movida dentro de auth.onAuthStateChanged
 </script>
 </body>
 </html>
