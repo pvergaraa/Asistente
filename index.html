@@ -17,7 +17,7 @@
     .section { margin-bottom: 30px; background: #fff; padding: 20px; border-radius: 8px; }
     input, textarea, select { margin: 5px 0; padding: 8px; width: 100%; }
     
-    /* === NUEVOS ESTILOS PARA EL ENCABEZADO Y BOTÓN SALIR === */
+    /* === ESTILOS PARA EL ENCABEZADO Y BOTÓN SALIR === */
     .header-container {
         display: flex; 
         justify-content: space-between; 
@@ -105,7 +105,7 @@
 </script>
 </head>
 <body>
-<div id="loginSection" class="section" style="max-width: 400px; margin: 50px auto; display: block;">
+    <div id="loginSection" class="section" style="max-width: 400px; margin: 50px auto; display: block;">
         <h2>🔒 Iniciar Sesión</h2>
         <p>Usa tu cuenta de Google (la misma que usas en Firebase) para acceder.</p>
         
@@ -183,7 +183,7 @@
         <div class="calendar" id="calendarView"></div>
     </div>
     
-    </div>
+</div>
 <script>
     // ----------------------------------------------------------------------
     // ⚙️ CONFIGURACIÓN E INICIALIZACIÓN DE FIREBASE (TUS DATOS REALES) ⚙️
@@ -205,7 +205,7 @@
     // Inicializar Firebase con el SDK de compatibilidad (V8 style)
     const app = firebase.initializeApp(firebaseConfig);
     const db = app.firestore(); 
-    const auth = app.auth(); 
+    const auth = app.auth(); // 💡 ESTO ES CRÍTICO: Definir 'auth'
 
     // ----------------------------------------------------------------------
     // 🔒 FUNCIONES DE AUTENTICACIÓN Y CONTROL DE VISTA 🔒
@@ -243,7 +243,7 @@
             loadTasksFromCloud(); 
         } else {
             // USUARIO DESLOGUEADO
-            loginContent.style.display = 'block';
+            loginSection.style.display = 'block'; // Usamos loginSection aquí
             mainContent.style.display = 'none';
             tasks = [];
             renderTasks();
