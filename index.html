@@ -155,16 +155,6 @@
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script> 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
-<script>
-    function mostrarFechaHora() {
-        const ahora = new Date();
-        const opciones = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
-        const fecha = ahora.toLocaleDateString('es-ES', opciones);
-        const hora = ahora.toLocaleTimeString('es-ES');
-        document.getElementById("fecha-hora").innerHTML = `${fecha} - ${hora}`;
-    }
-    setInterval(mostrarFechaHora, 1000);
-</script>
 </head>
 <body>
     <div id="loginSection" class="section" style="max-width: 400px; margin: 50px auto; display: block;">
@@ -258,6 +248,19 @@
     </div>
 </div>
 <script>
+    // Función de fecha/hora movida aquí para garantizar que se ejecute después de cargar el HTML.
+    function mostrarFechaHora() {
+        const ahora = new Date();
+        const opciones = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+        const fecha = ahora.toLocaleDateString('es-ES', opciones);
+        const hora = ahora.toLocaleTimeString('es-ES');
+        document.getElementById("fecha-hora").innerHTML = `${fecha} - ${hora}`;
+    }
+    // Llama a la función una vez al inicio y luego cada 1000ms.
+    mostrarFechaHora();
+    setInterval(mostrarFechaHora, 1000);
+
+
     // ----------------------------------------------------------------------
     // ⚙️ CONFIGURACIÓN E INICIALIZACIÓN DE FIREBASE (TUS DATOS REALES) ⚙️
     // ----------------------------------------------------------------------
@@ -372,7 +375,6 @@
         
         renderTasks();
         renderCalendar();
-        // 🌟 LLAMADA A LA NUEVA FUNCIÓN DE ALERTA
         checkForAlerts(); 
     }
     
@@ -381,7 +383,7 @@
     }
     
     // ----------------------------------------------------------------------
-    // ---- RESTO DE FUNCIONES (Tu lógica de la app) ----
+    // ---- RESTO DE FUNCIONES (Lógica de la app) ----
     // ----------------------------------------------------------------------
     
     function addTask(text = null) {
@@ -462,3 +464,268 @@
         
         let y = 10; 
         const lineHeight = 7;
+        const pageWidth = doc.internal.pageSize.getWidth();
+        const margin = 10;
+        
+        const title = "REPORTE DE TAREAS ASISTENTE DIARIO";
+        doc.setFontSize(16);
+        doc.text(title, pageWidth / 2, y, { align: 'center' });
+        y += lineHeight * 2;
+        
+        doc.setFontSize(10);
+        doc.setFont(doc.getFont().fontName, 'normal');
+
+        tasks.forEach((t, index) => {
+            const status = t.done ? '[COMPLETADA]' : '[PENDIENTE]';
+            const tag = t.tag ? ` | Etiqueta: ${t.tag}` : '';
+            const date = t.date ? ` | Fecha: ${t.date}` : '';
+            
+            const color = t.done ? [128, 128, 128] : [0, 0, 0]; 
+            doc.setTextColor(...color);
+
+            const textLine = `${index + 1}. ${status} ${t.text}${tag}${date}`;
+            
+            if (y + lineHeight > doc.internal.pageSize.getHeight() - margin) {
+                doc.addPage();
+                y = margin; 
+            }
+            
+            doc.text(textLine, margin, y);
+            y += lineHeight;
+        });
+
+        doc.save("Reporte_Tareas_" + new Date().toISOString().slice(0, 10) + ".pdf");
+    }
+
+    let recordingInterval;
+    let recordingSeconds = 0;
+
+    function startDictation() {
+        if (!('SpeechRecognition' in window) && !('webkitSpeechRecognition' in window)) {
+            alert('El reconocimiento de voz no está soportado por tu navegador. Prueba con Chrome o Edge.');
+            return;
+        }
+        
+        const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
+        recognition.lang = 'es-ES';
+        recognition.interimResults = false; 
+        
+        recognition.onstart = function() {
+            recordingSeconds = 0;
+            document.getElementById('recordingTimer').innerText = "🎙️ ESCUCHANDO... (0 segundos)";
+            recordingInterval = setInterval(() => {
+                recordingSeconds++;
+                document.getElementById('recordingTimer').innerText = `🎙️ ESCUCHANDO... (${recordingSeconds} segundos)`;
+            }, 1000);
+        };
+        
+        recognition.onresult = function(event) {
+            const transcript = event.results[0][0].transcript;
+            addTask("🗣️ TAREA DICTADA: " + transcript); 
+        };
+        
+        recognition.onerror = function(event) { 
+            clearInterval(recordingInterval); 
+            document.getElementById('recordingTimer').innerText = `❌ Error en el dictado: ${event.error}`;
+        };
+        
+        recognition.onend = function() { 
+            clearInterval(recordingInterval); 
+            document.getElementById('recordingTimer').innerText = `⏱️ Dictado finalizado. ${recordingSeconds} segundos`;
+        };
+
+        try {
+             recognition.start();
+        } catch(e) {
+             clearInterval(recordingInterval); 
+             document.getElementById('recordingTimer').innerText = "Error al iniciar el dictado. Es posible que ya esté activo.";
+        }
+    }
+
+    function renderCalendar() {
+        const calendar = document.getElementById('calendarView');
+        calendar.innerHTML = '';
+        const today = new Date();
+        const year = today.getFullYear();
+        const month = today.getMonth();
+        const daysInMonth = new Date(year, month + 1, 0).getDate();
+        
+        const todayStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+        
+        const dayNames = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes'];
+        
+        calendar.style.gridTemplateColumns = 'repeat(5, 1fr)'; 
+
+        dayNames.forEach(name => {
+            const header = document.createElement('div');
+            header.className = 'day-header';
+            header.style.fontWeight = 'bold';
+            header.style.textAlign = 'center';
+            header.innerText = name; 
+            calendar.appendChild(header);
+        });
+
+        let firstDayOfMonth = new Date(year, month, 1).getDay(); 
+        
+        if (firstDayOfMonth === 0) firstDayOfMonth = 7; 
+        
+        if (firstDayOfMonth >= 1 && firstDayOfMonth <= 5) {
+            for (let i = 1; i < firstDayOfMonth; i++) {
+                const emptyDay = document.createElement('div');
+                emptyDay.className = 'day';
+                emptyDay.style.background = '#f4f4f4';
+                emptyDay.style.border = 'none';
+                calendar.appendChild(emptyDay);
+            }
+        }
+        
+
+        for (let d = 1; d <= daysInMonth; d++) {
+            const dateObj = new Date(year, month, d);
+            const dayOfWeek = dateObj.getDay(); 
+            
+            if (dayOfWeek === 0 || dayOfWeek === 6) { 
+                continue; 
+            }
+
+            const monthStr = String(month + 1).padStart(2, '0');
+            const dayStr = String(d).padStart(2, '0');
+            const dateStr = `${year}-${monthStr}-${dayStr}`;
+            
+            const dayDiv = document.createElement('div');
+            dayDiv.className = 'day';
+
+            if (dateStr === todayStr) {
+                dayDiv.classList.add('current-day');
+            }
+
+            const dayNameIndex = dayOfWeek === 0 ? 6 : dayOfWeek - 1; 
+            const dayNameShort = dayNames[dayNameIndex] ? dayNames[dayNameIndex].substring(0, 3) : '';
+            dayDiv.innerHTML = `<strong>${dayNameShort} ${d}</strong><br>`;
+            
+            tasks.filter(t => t.date === dateStr).forEach(t => {
+                const p = document.createElement('p');
+                p.innerText = t.text;
+                p.style.fontSize = '12px';
+                p.style.color = t.done ? 'gray' : '#333';
+                p.style.textDecoration = t.done ? 'line-through' : 'none';
+                dayDiv.appendChild(p);
+            });
+            calendar.appendChild(dayDiv);
+        }
+    }
+
+    function searchItems() {
+        const query = document.getElementById('searchInput').value.toLowerCase();
+        const results = document.getElementById('searchResults');
+        results.innerHTML = '';
+        
+        if (query.trim() === "") {
+            results.innerHTML = '<p>Por favor, ingrese un término de búsqueda.</p>';
+            return;
+        }
+
+        const foundTasks = tasks.filter(t => 
+            t.text.toLowerCase().includes(query) || 
+            (t.tag && t.tag.toLowerCase().includes(query))
+        );
+        
+        if (foundTasks.length > 0) {
+            foundTasks.forEach(t => {
+                const li = document.createElement('li');
+                li.innerText = `TAREA: ${t.text} (${t.tag || 'Sin etiqueta'}) - ${t.date || 'Sin fecha'}`;
+                li.className = t.done ? 'completed' : '';
+                results.appendChild(li);
+            });
+        } else {
+            results.innerHTML = '<p>No se encontraron tareas con ese criterio.</p>';
+        }
+    }
+    
+    // ----------------------------------------------------------------------
+    // 🔔 FUNCIONES PARA LA ALERTA (MODAL) 🔔
+    // ----------------------------------------------------------------------
+
+    function closeAlertModal() {
+        document.getElementById('taskAlertModal').style.display = 'none';
+    }
+
+    function checkForAlerts() {
+        const today = new Date();
+        const todayStr = today.toISOString().slice(0, 10); // YYYY-MM-DD
+        
+        // Calcula la fecha de mañana
+        const tomorrow = new Date(today);
+        tomorrow.setDate(today.getDate() + 1);
+        const tomorrowStr = tomorrow.toISOString().slice(0, 10);
+        
+        // Filtra las tareas pendientes (done: false) con fecha en hoy o mañana
+        const pendingAlerts = tasks.filter(t => 
+            !t.done && (t.date === todayStr || t.date === tomorrowStr)
+        ).sort((a, b) => {
+            // Ordena: Primero las de hoy, luego las de mañana
+            if (a.date === todayStr && b.date === tomorrowStr) return -1;
+            if (a.date === tomorrowStr && b.date === todayStr) return 1;
+            return 0;
+        });
+
+        if (pendingAlerts.length > 0) {
+            const list = document.getElementById('alertTaskList');
+            const header = document.getElementById('alertMessageHeader');
+            list.innerHTML = '';
+            
+            let todayCount = 0;
+            let tomorrowCount = 0;
+
+            pendingAlerts.forEach(task => {
+                const li = document.createElement('li');
+                const dateDisplay = task.date === todayStr ? 'HOY' : 'MAÑANA';
+                
+                if (task.date === todayStr) todayCount++;
+                if (task.date === tomorrowStr) tomorrowCount++;
+
+                let text = `${dateDisplay} (${task.date}): ${task.text}`;
+                if (task.tag === 'Urgente') {
+                    text = `⚠️ ¡URGENTE! ${text}`;
+                }
+                li.innerText = text;
+                list.appendChild(li);
+            });
+
+            // Crea un mensaje de encabezado más informativo
+            let headerText = "Tienes ";
+            if (todayCount > 0) {
+                headerText += `<span style="font-weight: bold; color: #d32f2f;">${todayCount} tarea(s) para HOY</span>`;
+            }
+            if (todayCount > 0 && tomorrowCount > 0) {
+                headerText += " y ";
+            }
+            if (tomorrowCount > 0) {
+                headerText += `<span style="font-weight: bold; color: #1976d2;">${tomorrowCount} tarea(s) para MAÑANA</span>`;
+            }
+            
+            header.innerHTML = headerText;
+
+            // Muestra el modal
+            document.getElementById('taskAlertModal').style.display = 'block';
+        }
+    }
+
+    // ---- MANEJO DEL BUSCADOR ----
+    const searchInput = document.getElementById("searchInput");
+    const searchResults = document.getElementById("searchResults");
+    const clearSearchBtn = document.getElementById("clearSearchBtn");
+    const searchBtn = document.getElementById('searchBtn');
+
+    searchBtn.addEventListener('click', searchItems);
+
+    clearSearchBtn.addEventListener("click", () => {
+      searchInput.value = "";
+      searchResults.innerHTML = "";
+      if(auth.currentUser) { 
+        loadTasksFromCloud(); 
+      }
+    });
+</script>
+</body>
+</html>
