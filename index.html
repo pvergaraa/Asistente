@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
 <meta charset="utf-8"/>
-<title>Asistente Diario - Asistente Sincronizado con Firebase</title>
+<title>Asistente Diario - Sincronizado y Seguro</title>
 <style>
     /* Diseño Centrado */
     body { 
@@ -55,9 +55,10 @@
         font-weight: bold;
     }
 </style>
+
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script> <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
 <script>
     function mostrarFechaHora() {
@@ -75,69 +76,80 @@
     
     <p id="fecha-hora"></p>
 
-<div class="section">
-    <h2>✅ Tareas</h2>
-    <input id="taskInput" placeholder="Escribe una tarea..." type="text"/>
-    <select id="taskTag">
-        <option value="">Etiqueta</option>
-        <option value="Urgente">Urgente</option>
-        <option value="Reunión">Reunión</option>
-        <option value="Pendiente">Pendiente</option>
-    </select>
-    <input id="taskDate" type="date"/>
-    
-    <div class="task-buttons">
-        <div>
-            <button onclick="addTask()">Agregar tarea</button>
-            <button onclick="startDictation()">🎙️ Comenzar dictado</button>
-            <button onclick="exportTasks()">Exportar tareas</button>
+<div id="loginSection" class="section" style="max-width: 400px; margin: 50px auto; display: block;">
+    <h2>🔒 Iniciar Sesión</h2>
+    <input id="emailInput" placeholder="Correo electrónico" type="email"/>
+    <input id="passwordInput" placeholder="Contraseña" type="password"/>
+    <button onclick="handleLogin()">Ingresar</button>
+    <p id="authMessage" style="color:red; margin-top:10px;"></p>
+</div>
+<div id="mainContent" style="display: none;">
+
+    <div class="section">
+        <h2>✅ Tareas</h2>
+        <input id="taskInput" placeholder="Escribe una tarea..." type="text"/>
+        <select id="taskTag">
+            <option value="">Etiqueta</option>
+            <option value="Urgente">Urgente</option>
+            <option value="Reunión">Reunión</option>
+            <option value="Pendiente">Pendiente</option>
+        </select>
+        <input id="taskDate" type="date"/>
+        
+        <div class="task-buttons">
+            <div>
+                <button onclick="addTask()">Agregar tarea</button>
+                <button onclick="startDictation()">🎙️ Comenzar dictado</button>
+                <button onclick="exportTasks()">Exportar tareas</button>
+            </div>
+            <button id="deleteBtn" style="background:#d32f2f" onclick="deleteCompletedTasks()">🗑️ Borrar tareas completadas</button>
         </div>
-        <button id="deleteBtn" style="background:#d32f2f" onclick="deleteCompletedTasks()">🗑️ Borrar tareas completadas</button>
+        
+        <p id="recordingTimer" style="margin-top: 10px;">⏱️ Tiempo de grabación: 0 segundos</p>
+        <p id="statusMessage" style="color: blue;">Esperando inicio de sesión...</p>
+
+        <ul id="taskList"></ul>
+        <p class="stats" id="taskStats"></p>
+    </div>
+
+    <section id="buscador" class="section">
+        <h2 class="text-xl font-semibold mb-2">Buscar tareas</h2>
+        <div class="flex items-center gap-2">
+            <input
+            type="text"
+            id="searchInput"
+            placeholder="Escribe para buscar..."
+            class="flex-1 border p-2 rounded"
+            />
+            <button
+            id="searchBtn"
+            class="bg-blue-500 hover:bg-blue-600 text-white px-3 py-2 rounded"
+            >
+            Buscar
+            </button>
+            <button
+            id="clearSearchBtn"
+            class="bg-gray-400 hover:bg-gray-500 text-white px-3 py-2 rounded"
+            >
+            Limpiar
+            </button>
+        </div>
+        <div id="searchResults" class="mt-4"></div>
+    </section>
+
+    <div class="section">
+        <h2>📅 Calendario de tareas</h2>
+        <div class="calendar" id="calendarView"></div>
     </div>
     
-    <p id="recordingTimer" style="margin-top: 10px;">⏱️ Tiempo de grabación: 0 segundos</p>
-    <p id="statusMessage" style="color: blue;">Cargando...</p>
+    <button onclick="logout()" style="background:#555; margin-top: 20px;">Cerrar Sesión</button> 
 
-    <ul id="taskList"></ul>
-    <p class="stats" id="taskStats"></p>
 </div>
-
-<section id="buscador" class="section">
-  <h2 class="text-xl font-semibold mb-2">Buscar tareas</h2>
-  <div class="flex items-center gap-2">
-    <input
-      type="text"
-      id="searchInput"
-      placeholder="Escribe para buscar..."
-      class="flex-1 border p-2 rounded"
-    />
-    <button
-      id="searchBtn"
-      class="bg-blue-500 hover:bg-blue-600 text-white px-3 py-2 rounded"
-    >
-      Buscar
-    </button>
-    <button
-      id="clearSearchBtn"
-      class="bg-gray-400 hover:bg-gray-500 text-white px-3 py-2 rounded"
-    >
-      Limpiar
-    </button>
-  </div>
-  <div id="searchResults" class="mt-4"></div>
-</section>
-
-<div class="section">
-    <h2>📅 Calendario de tareas</h2>
-    <div class="calendar" id="calendarView"></div>
-</div>
-
 <script>
     // ----------------------------------------------------------------------
     // ⚙️ CONFIGURACIÓN E INICIALIZACIÓN DE FIREBASE (TUS DATOS REALES) ⚙️
     // ----------------------------------------------------------------------
     
-    // TUS CREDENCIALES
     const firebaseConfig = {
         apiKey: "AIzaSyAh1g7i3vI37nSQYkUi1gSKstRvLIrCVOY",
         authDomain: "asistenteweb-d1a36.firebaseapp.com",
@@ -147,13 +159,61 @@
         appId: "1:300972571463:web:b2259fb2eac4b7bae12a62"
     };
 
-    // Colección y Documento Fijo para todas las tareas (Rutas de la base de datos)
+    // Colección y Documento Fijo para todas las tareas
     const COLLECTION_NAME = "users";
     const DOCUMENT_ID = "asistente_master_tasks"; 
 
     // Inicializar Firebase con el SDK de compatibilidad (V8 style)
     const app = firebase.initializeApp(firebaseConfig);
     const db = app.firestore(); 
+    const auth = app.auth(); // <-- INICIALIZACIÓN DE AUTH
+
+    // ----------------------------------------------------------------------
+    // 🔒 FUNCIONES DE AUTENTICACIÓN Y CONTROL DE VISTA 🔒
+    // ----------------------------------------------------------------------
+    const loginSection = document.getElementById('loginSection');
+    const mainContent = document.getElementById('mainContent');
+    const authMessage = document.getElementById('authMessage');
+
+    function handleLogin() {
+        const email = document.getElementById('emailInput').value;
+        const password = document.getElementById('passwordInput').value;
+        
+        auth.signInWithEmailAndPassword(email, password)
+            .catch((error) => {
+                // Muestra un mensaje de error al usuario
+                authMessage.innerText = `Error de ingreso: ${error.message}`;
+            });
+    }
+
+    function logout() {
+        auth.signOut().then(() => {
+            // No hacemos nada aquí, el onAuthStateChanged se encarga de ocultar la vista
+            console.log("Sesión cerrada.");
+        }).catch((error) => {
+            console.error("Error al cerrar sesión: ", error);
+        });
+    }
+
+    // Escucha el estado de autenticación (el motor de seguridad de la vista)
+    auth.onAuthStateChanged(user => {
+        if (user) {
+            // USUARIO LOGUEADO
+            loginSection.style.display = 'none';
+            mainContent.style.display = 'block';
+            authMessage.innerText = '';
+            // Carga los datos solo si está autenticado
+            loadTasksFromCloud(); 
+        } else {
+            // USUARIO DESLOGUEADO
+            loginSection.style.display = 'block';
+            mainContent.style.display = 'none';
+            // Limpia las tareas mostradas al cerrar sesión
+            tasks = [];
+            renderTasks();
+            renderCalendar();
+        }
+    });
 
     // ----------------------------------------------------------------------
     // ☁️ FUNCIONES DE SINCRONIZACIÓN EN LA NUBE CON FIREBASE ☁️
@@ -164,42 +224,47 @@
 
     // Función para guardar 'tasks' en Firebase
     async function saveTasksToCloud() {
+        if (!auth.currentUser) {
+            // Evita guardar si no hay nadie logueado (aunque las reglas de Firestore ya lo harían)
+            statusMessage.innerText = "🚨 Error: Debes iniciar sesión para guardar.";
+            return;
+        }
+        
         try {
             statusMessage.innerText = "Guardando...";
-            // Usa set() del SDK compatible
             await db.collection(COLLECTION_NAME).doc(DOCUMENT_ID).set({ tasks });
             console.log("Tareas guardadas en Firebase.");
             statusMessage.innerText = "Guardado en la nube.";
         } catch (e) {
             console.error("Error al guardar en la nube: ", e);
-            statusMessage.innerText = `🚨 Error al guardar en Firebase: ${e.code || e.message}`;
+            statusMessage.innerText = `🚨 Error al guardar: ${e.code || e.message}`;
         }
     }
 
     // Función para cargar 'tasks' desde Firebase
     async function loadTasksFromCloud() {
+        if (!auth.currentUser) {
+            // Evita intentar cargar si no hay sesión
+            return;
+        }
+        
         try {
             statusMessage.innerText = "Cargando...";
-            // Usa get() del SDK compatible
             const docSnap = await db.collection(COLLECTION_NAME).doc(DOCUMENT_ID).get();
 
             if (docSnap.exists) {
-                // Si el documento existe, carga el array 'tasks'
                 tasks = docSnap.data().tasks || []; 
                 statusMessage.innerText = "Cargado desde la nube.";
             } else {
-                console.log("No se encontró el documento de tareas. Inicializando vacío.");
-                tasks = []; // Inicializa vacío si no hay datos
-                statusMessage.innerText = "Listo (datos iniciales).";
+                tasks = []; 
+                statusMessage.innerText = "Listo (documento inicializado).";
             }
         } catch (e) {
             console.error("Error al cargar desde la nube: ", e);
             tasks = [];
-            // Este es el error de reglas/conexión.
-            statusMessage.innerText = `🚨 Error de conexión/reglas de Firebase: ${e.code || e.message}. Verifica tus Reglas de Seguridad de Firestore.`;
+            statusMessage.innerText = `🚨 Error de conexión/reglas de Firebase: ${e.code || e.message}.`;
         }
         
-        // Renderizar siempre después de intentar cargar
         renderTasks();
         renderCalendar();
     }
@@ -210,9 +275,12 @@
     }
     
     // ----------------------------------------------------------------------
-    // ---- RESTO DE FUNCIONES (Lógica de la app) ----
+    // ---- RESTO DE FUNCIONES (Tu lógica de la app) ----
     // ----------------------------------------------------------------------
     
+    // NOTA: El resto de funciones (addTask, toggleTask, deleteCompletedTasks, etc.)
+    // YA llaman a saveData(), que ahora es saveTasksToCloud(), lo cual es correcto.
+
     function addTask(text = null) {
         const taskInput = document.getElementById('taskInput');
         const taskDateInput = document.getElementById('taskDate'); 
@@ -394,19 +462,16 @@
 
         let firstDayOfMonth = new Date(year, month, 1).getDay(); 
         
-        // Ajusta firstDayOfMonth para que 1 sea Lunes y 5 sea Viernes
-        if (firstDayOfMonth === 0) firstDayOfMonth = 7; // Domingo
-        if (firstDayOfMonth > 5) { // Sábado o Domingo
-            firstDayOfMonth = 1; // Para el renderizado, empezamos el lunes
-        }
-
-        // Rellenar días vacíos antes del primer día del mes (solo Lun-Vie)
-        for (let i = 1; i < firstDayOfMonth; i++) {
-            const emptyDay = document.createElement('div');
-            emptyDay.className = 'day';
-            emptyDay.style.background = '#f4f4f4';
-            emptyDay.style.border = 'none';
-            calendar.appendChild(emptyDay);
+        if (firstDayOfMonth === 0) firstDayOfMonth = 7; 
+        
+        if (firstDayOfMonth >= 1 && firstDayOfMonth <= 5) {
+            for (let i = 1; i < firstDayOfMonth; i++) {
+                const emptyDay = document.createElement('div');
+                emptyDay.className = 'day';
+                emptyDay.style.background = '#f4f4f4';
+                emptyDay.style.border = 'none';
+                calendar.appendChild(emptyDay);
+            }
         }
         
 
@@ -429,8 +494,8 @@
                 dayDiv.classList.add('current-day');
             }
 
-            const dayNameIndex = dayOfWeek === 0 ? 6 : dayOfWeek - 1; // 1=Lun, 5=Vie
-            const dayNameShort = dayNames[dayNameIndex] ? dayNames[dayNameIndex].substring(0, 3) : ''; 
+            const dayNameIndex = dayOfWeek === 0 ? 6 : dayOfWeek - 1; 
+            const dayNameShort = dayNames[dayNameIndex] ? dayNames[dayNameIndex].substring(0, 3) : '';
             dayDiv.innerHTML = `<strong>${dayNameShort} ${d}</strong><br>`;
             
             tasks.filter(t => t.date === dateStr).forEach(t => {
@@ -483,11 +548,14 @@
     clearSearchBtn.addEventListener("click", () => {
       searchInput.value = "";
       searchResults.innerHTML = "";
-      loadTasksFromCloud(); 
+      // Cuando no hay login, el onAuthStateChanged limpiará las tareas
+      if(auth.currentUser) { 
+        loadTasksFromCloud(); 
+      }
     });
 
-    // ---- Inicialización ----
-    loadTasksFromCloud();
+    // La inicialización loadTasksFromCloud() ha sido eliminada de aquí
+    // y movida dentro de auth.onAuthStateChanged
 </script>
 </body>
 </html>
