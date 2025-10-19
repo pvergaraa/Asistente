@@ -16,6 +16,24 @@
     h1 { color: #333; }
     .section { margin-bottom: 30px; background: #fff; padding: 20px; border-radius: 8px; }
     input, textarea, select { margin: 5px 0; padding: 8px; width: 100%; }
+    
+    /* === NUEVOS ESTILOS PARA EL ENCABEZADO Y BOTÓN SALIR === */
+    .header-container {
+        display: flex; 
+        justify-content: space-between; 
+        align-items: center; 
+        margin-bottom: 10px; 
+    }
+    .logout-btn {
+        background: #d32f2f; /* Rojo para el botón de salir */
+        font-weight: bold;
+        padding: 8px 12px;
+    }
+    .logout-btn:hover {
+        opacity: 0.8;
+    }
+    /* ======================================================= */
+
     /* Estilo para el botón de Google */
     .google-btn { 
         padding: 10px 15px; 
@@ -72,7 +90,8 @@
 
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script> <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script> 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
 <script>
     function mostrarFechaHora() {
@@ -86,21 +105,26 @@
 </script>
 </head>
 <body>
-<h1>🗓️ Asistente Diario - PVergaraA</h1>
+<div id="loginSection" class="section" style="max-width: 400px; margin: 50px auto; display: block;">
+        <h2>🔒 Iniciar Sesión</h2>
+        <p>Usa tu cuenta de Google (la misma que usas en Firebase) para acceder.</p>
+        
+        <button onclick="handleLogin()" class="google-btn">
+            🚀 Iniciar Sesión con Google
+        </button>
+        
+        <p id="authMessage" style="color:red; margin-top:10px;"></p>
+    </div>
+    <div id="mainContent" style="display: none;">
     
+    <div class="header-container">
+        <h1>🗓️ Asistente Diario - PVergaraA</h1>
+        <button onclick="logout()" class="logout-btn">
+            🚪 Salir
+        </button> 
+    </div>
     <p id="fecha-hora"></p>
 
-<div id="loginSection" class="section" style="max-width: 400px; margin: 50px auto; display: block;">
-    <h2>🔒 Iniciar Sesión</h2>
-    <p>Usa tu cuenta de Google (la misma que usas en Firebase) para acceder.</p>
-    
-    <button onclick="handleLogin()" class="google-btn">
-        🚀 Iniciar Sesión con Google
-    </button>
-    
-    <p id="authMessage" style="color:red; margin-top:10px;"></p>
-</div>
-<div id="mainContent" style="display: none;">
 
     <div class="section">
         <h2>✅ Tareas</h2>
@@ -159,9 +183,7 @@
         <div class="calendar" id="calendarView"></div>
     </div>
     
-    <button onclick="logout()" style="background:#555; margin-top: 20px;">Cerrar Sesión</button> 
-
-</div>
+    </div>
 <script>
     // ----------------------------------------------------------------------
     // ⚙️ CONFIGURACIÓN E INICIALIZACIÓN DE FIREBASE (TUS DATOS REALES) ⚙️
@@ -183,7 +205,7 @@
     // Inicializar Firebase con el SDK de compatibilidad (V8 style)
     const app = firebase.initializeApp(firebaseConfig);
     const db = app.firestore(); 
-    const auth = app.auth(); // INICIALIZACIÓN DE AUTH
+    const auth = app.auth(); 
 
     // ----------------------------------------------------------------------
     // 🔒 FUNCIONES DE AUTENTICACIÓN Y CONTROL DE VISTA 🔒
@@ -196,14 +218,13 @@
     function handleLogin() {
         const provider = new firebase.auth.GoogleAuthProvider();
         
-        // Inicia el flujo de autenticación de Google con una ventana emergente
         auth.signInWithPopup(provider)
             .catch((error) => {
-                // Muestra un mensaje de error si el usuario cancela o hay un problema
                 authMessage.innerText = `Error de ingreso con Google: ${error.message}`;
             });
     }
 
+    // FUNCIÓN DE CIERRE DE SESIÓN
     function logout() {
         auth.signOut().then(() => {
             console.log("Sesión cerrada.");
@@ -219,13 +240,11 @@
             loginSection.style.display = 'none';
             mainContent.style.display = 'block';
             authMessage.innerText = '';
-            // Carga los datos solo si está autenticado
             loadTasksFromCloud(); 
         } else {
             // USUARIO DESLOGUEADO
-            loginSection.style.display = 'block';
+            loginContent.style.display = 'block';
             mainContent.style.display = 'none';
-            // Limpia las tareas mostradas al cerrar sesión
             tasks = [];
             renderTasks();
             renderCalendar();
@@ -239,7 +258,6 @@
     let tasks = []; 
     const statusMessage = document.getElementById('statusMessage');
 
-    // Función para guardar 'tasks' en Firebase
     async function saveTasksToCloud() {
         if (!auth.currentUser) {
             statusMessage.innerText = "🚨 Error: Debes iniciar sesión para guardar.";
@@ -248,7 +266,6 @@
         
         try {
             statusMessage.innerText = "Guardando...";
-            // Guardamos el array 'tasks' en el documento fijo
             await db.collection(COLLECTION_NAME).doc(DOCUMENT_ID).set({ tasks });
             console.log("Tareas guardadas en Firebase.");
             statusMessage.innerText = "Guardado en la nube.";
@@ -258,7 +275,6 @@
         }
     }
 
-    // Función para cargar 'tasks' desde Firebase
     async function loadTasksFromCloud() {
         if (!auth.currentUser) {
             return;
@@ -285,7 +301,6 @@
         renderCalendar();
     }
     
-    // Función central que se llama después de cada modificación
     function saveData() {
         saveTasksToCloud(); 
     }
