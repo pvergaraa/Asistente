@@ -4,583 +4,731 @@
 <meta charset="utf-8"/>
 <title>Asistente Diario - Sincronizado y Seguro</title>
 <style>
-    /* Diseño Centrado */
-    body { 
-        font-family: Arial, sans-serif; 
-        margin: 20px auto; 
-        background: #f4f4f4; 
-        max-width: 1200px; 
-        padding: 0 20px; 
-    }
-    
-    h1 { color: #333; }
-    .section { margin-bottom: 30px; background: #fff; padding: 20px; border-radius: 8px; }
-    input, textarea, select { margin: 5px 0; padding: 8px; width: 100%; }
-    
-    /* === ESTILOS PARA EL ENCABEZADO Y BOTÓN SALIR === */
-    .header-container {
-        display: flex; 
-        justify-content: space-between; 
-        align-items: center; 
-        margin-bottom: 10px; 
-    }
-    .logout-btn {
-        background: #d32f2f; /* Rojo para el botón de salir */
-        font-weight: bold;
-        padding: 8px 12px;
-    }
-    .logout-btn:hover {
-        opacity: 0.8;
-    }
-    /* ======================================================= */
+    /* Diseño Centrado */
+    body { 
+        font-family: Arial, sans-serif; 
+        margin: 20px auto; 
+        background: #f4f4f4; 
+        max-width: 1200px; 
+        padding: 0 20px; 
+    }
+    
+    h1 { color: #333; }
+    .section { margin-bottom: 30px; background: #fff; padding: 20px; border-radius: 8px; }
+    input, textarea, select { margin: 5px 0; padding: 8px; width: 100%; }
+    
+    /* === ESTILOS PARA EL ENCABEZADO Y BOTÓN SALIR === */
+    .header-container {
+        display: flex; 
+        justify-content: space-between; 
+        align-items: center; 
+        margin-bottom: 10px; 
+    }
+    .logout-btn {
+        background: #d32f2f; /* Rojo para el botón de salir */
+        font-weight: bold;
+        padding: 8px 12px;
+    }
+    .logout-btn:hover {
+        opacity: 0.8;
+    }
+    /* ======================================================= */
 
-    /* Estilo para el botón de Google */
-    .google-btn { 
-        padding: 10px 15px; 
-        margin: 5px 5px 0 0; 
-        border: none; 
-        border-radius: 5px; 
-        cursor: pointer; 
-        background: #db4437; /* Rojo de Google */
-        color: white; 
+    /* Estilo para el botón de Google */
+    .google-btn { 
+        padding: 10px 15px; 
+        margin: 5px 5px 0 0; 
+        border: none; 
+        border-radius: 5px; 
+        cursor: pointer; 
+        background: #db4437; /* Rojo de Google */
+        color: white; 
+        font-weight: bold;
+    }
+    .google-btn:hover { opacity: 0.9; }
+    /* Estilo para los botones generales (Agregar Tarea, Exportar, etc.) */
+    button { padding: 10px 15px; margin: 5px 5px 0 0; border: none; border-radius: 5px; cursor: pointer; background: #1976d2; color: white; }
+    button:hover { opacity: 0.9; }
+    
+    ul { list-style-type: none; padding: 0; }
+    li { 
+        margin: 5px 0; 
+        padding: 5px; 
+        background: #eaeaea; 
+        border-radius: 5px; 
+        cursor: pointer; 
+        white-space: normal; 
+    }
+    .completed { text-decoration: line-through; color: gray; }
+    .calendar { display: grid; grid-template-columns: repeat(5, 1fr); gap: 5px; } 
+    .day { background: #ddd; padding: 10px; border-radius: 5px; min-height: 60px; }
+    
+    .current-day {
+        background-color: #b0b0b0 !important;
+        border: 2px solid #555;
+    }
+    
+    .stats { font-weight: bold; margin-top: 10px; }
+    
+    .task-buttons { 
+        display: flex; 
+        gap: 10px; 
+        flex-wrap: wrap; 
+        margin-top: 10px; 
+        align-items: flex-start;
+        justify-content: space-between; 
+    }
+    #deleteBtn {
+        margin-left: auto; 
+    }
+    
+    .urgent-tag {
+        color: red;
+        font-weight: bold;
+    }
+
+    /* --- ESTILOS PARA EL POPUP DE ALERTA (NUEVO) --- */
+    .alert-modal {
+        display: none; /* Oculto por defecto */
+        position: fixed;
+        z-index: 1000; /* Asegura que esté por encima de todo */
+        left: 0;
+        top: 0;
+        width: 100%;
+        height: 100%;
+        overflow: auto;
+        background-color: rgba(0,0,0,0.4); /* Fondo semi-transparente */
+    }
+
+    .alert-content {
+        background-color: #fefefe;
+        margin: 15% auto; /* 15% arriba y centrado */
+        padding: 20px;
+        border: 1px solid #888;
+        width: 80%;
+        max-width: 500px; /* Ancho máximo para mejor visualización */
+        border-radius: 10px;
+        box-shadow: 0 4px 8px 0 rgba(0,0,0,0.2), 0 6px 20px 0 rgba(0,0,0,0.19);
+    }
+
+    .alert-content h3 {
+        color: #d32f2f; /* Rojo de alerta */
+        margin-top: 0;
+        border-bottom: 2px solid #eee;
+        padding-bottom: 10px;
+    }
+
+    .alert-content ul {
+        list-style-type: disc;
+        margin-left: 20px;
+        max-height: 200px;
+        overflow-y: auto;
+        padding-right: 10px;
+    }
+
+    .alert-content li {
+        background: none;
+        padding: 5px 0;
+        margin: 2px 0;
+        border-bottom: 1px dotted #ccc;
+        cursor: default;
+    }
+
+    .alert-close {
+        color: #aaa;
+        float: right;
+        font-size: 28px;
         font-weight: bold;
     }
-    .google-btn:hover { opacity: 0.9; }
-    /* Estilo para los botones generales (Agregar Tarea, Exportar, etc.) */
-    button { padding: 10px 15px; margin: 5px 5px 0 0; border: none; border-radius: 5px; cursor: pointer; background: #1976d2; color: white; }
-    button:hover { opacity: 0.9; }
-    
-    ul { list-style-type: none; padding: 0; }
-    li { 
-        margin: 5px 0; 
-        padding: 5px; 
-        background: #eaeaea; 
-        border-radius: 5px; 
-        cursor: pointer; 
-        white-space: normal; 
+
+    .alert-close:hover,
+    .alert-close:focus {
+        color: #000;
+        text-decoration: none;
+        cursor: pointer;
     }
-    .completed { text-decoration: line-through; color: gray; }
-    .calendar { display: grid; grid-template-columns: repeat(5, 1fr); gap: 5px; } 
-    .day { background: #ddd; padding: 10px; border-radius: 5px; min-height: 60px; }
-    
-    .current-day {
-        background-color: #b0b0b0 !important;
-        border: 2px solid #555;
-    }
-    
-    .stats { font-weight: bold; margin-top: 10px; }
-    
-    .task-buttons { 
-        display: flex; 
-        gap: 10px; 
-        flex-wrap: wrap; 
-        margin-top: 10px; 
-        align-items: flex-start;
-        justify-content: space-between; 
-    }
-    #deleteBtn {
-        margin-left: auto; 
-    }
-    
-    .urgent-tag {
-        color: red;
-        font-weight: bold;
-    }
+    /* ------------------------------------------- */
 </style>
 
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script> 
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script> 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
 <script>
-    function mostrarFechaHora() {
-        const ahora = new Date();
-        const opciones = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
-        const fecha = ahora.toLocaleDateString('es-ES', opciones);
-        const hora = ahora.toLocaleTimeString('es-ES');
-        document.getElementById("fecha-hora").innerHTML = `${fecha} - ${hora}`;
-    }
-    setInterval(mostrarFechaHora, 1000);
+    function mostrarFechaHora() {
+        const ahora = new Date();
+        const opciones = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+        const fecha = ahora.toLocaleDateString('es-ES', opciones);
+        const hora = ahora.toLocaleTimeString('es-ES');
+        document.getElementById("fecha-hora").innerHTML = `${fecha} - ${hora}`;
+    }
+    setInterval(mostrarFechaHora, 1000);
 </script>
 </head>
 <body>
-    <div id="loginSection" class="section" style="max-width: 400px; margin: 50px auto; display: block;">
-        <h2>🔒 Iniciar Sesión</h2>
-        <p>Usa tu cuenta de Google (la misma que usas en Firebase) para acceder.</p>
-        
-        <button onclick="handleLogin()" class="google-btn">
-            🚀 Iniciar Sesión con Google
-        </button>
-        
-        <p id="authMessage" style="color:red; margin-top:10px;"></p>
+    <div id="loginSection" class="section" style="max-width: 400px; margin: 50px auto; display: block;">
+        <h2>🔒 Iniciar Sesión</h2>
+        <p>Usa tu cuenta de Google (la misma que usas en Firebase) para acceder.</p>
+        
+        <button onclick="handleLogin()" class="google-btn">
+            🚀 Iniciar Sesión con Google
+        </button>
+        
+        <p id="authMessage" style="color:red; margin-top:10px;"></p>
+    </div>
+    <div id="mainContent" style="display: none;">
+    
+    <div class="header-container">
+        <h1>🗓️ Asistente Diario - PVergaraA</h1>
+        <button onclick="logout()" class="logout-btn">
+            🚪 Salir
+        </button> 
+    </div>
+    <p id="fecha-hora"></p>
+
+
+    <div class="section">
+        <h2>✅ Tareas</h2>
+        <input id="taskInput" placeholder="Escribe una tarea..." type="text"/>
+        <select id="taskTag">
+            <option value="">Etiqueta</option>
+            <option value="Urgente">Urgente</option>
+            <option value="Reunión">Reunión</option>
+            <option value="Pendiente">Pendiente</option>
+        </select>
+        <input id="taskDate" type="date"/>
+        
+        <div class="task-buttons">
+            <div>
+                <button onclick="addTask()">Agregar tarea</button>
+                <button onclick="startDictation()">🎙️ Comenzar dictado</button>
+                <button onclick="exportTasks()">Exportar tareas</button>
+            </div>
+            <button id="deleteBtn" style="background:#d32f2f" onclick="deleteCompletedTasks()">🗑️ Borrar tareas completadas</button>
+        </div>
+        
+        <p id="recordingTimer" style="margin-top: 10px;">⏱️ Tiempo de grabación: 0 segundos</p>
+        <p id="statusMessage" style="color: blue;">Esperando inicio de sesión...</p>
+
+        <ul id="taskList"></ul>
+        <p class="stats" id="taskStats"></p>
+    </div>
+
+    <section id="buscador" class="section">
+        <h2 class="text-xl font-semibold mb-2">Buscar tareas</h2>
+        <div class="flex items-center gap-2">
+            <input
+            type="text"
+            id="searchInput"
+            placeholder="Escribe para buscar..."
+            class="flex-1 border p-2 rounded"
+            />
+            <button
+            id="searchBtn"
+            class="bg-blue-500 hover:bg-blue-600 text-white px-3 py-2 rounded"
+            >
+            Buscar
+            </button>
+            <button
+            id="clearSearchBtn"
+            class="bg-gray-400 hover:bg-gray-500 text-white px-3 py-2 rounded"
+            >
+            Limpiar
+            </button>
+        </div>
+        <div id="searchResults" class="mt-4"></div>
+    </section>
+
+    <div class="section">
+        <h2>📅 Calendario de tareas</h2>
+        <div class="calendar" id="calendarView"></div>
+    </div>
+    
+</div>
+
+<div id="taskAlertModal" class="alert-modal">
+    <div class="alert-content">
+        <span class="alert-close" onclick="closeAlertModal()">&times;</span>
+        <h3>🔔 Tareas Próximas o de Hoy</h3>
+        <p id="alertMessageHeader"></p>
+        <ul id="alertTaskList">
+            </ul>
+        <button onclick="closeAlertModal()" style="margin-top: 15px;">Entendido</button>
     </div>
-    <div id="mainContent" style="display: none;">
-    
-    <div class="header-container">
-        <h1>🗓️ Asistente Diario - PVergaraA</h1>
-        <button onclick="logout()" class="logout-btn">
-            🚪 Salir
-        </button> 
-    </div>
-    <p id="fecha-hora"></p>
-
-
-    <div class="section">
-        <h2>✅ Tareas</h2>
-        <input id="taskInput" placeholder="Escribe una tarea..." type="text"/>
-        <select id="taskTag">
-            <option value="">Etiqueta</option>
-            <option value="Urgente">Urgente</option>
-            <option value="Reunión">Reunión</option>
-            <option value="Pendiente">Pendiente</option>
-        </select>
-        <input id="taskDate" type="date"/>
-        
-        <div class="task-buttons">
-            <div>
-                <button onclick="addTask()">Agregar tarea</button>
-                <button onclick="startDictation()">🎙️ Comenzar dictado</button>
-                <button onclick="exportTasks()">Exportar tareas</button>
-            </div>
-            <button id="deleteBtn" style="background:#d32f2f" onclick="deleteCompletedTasks()">🗑️ Borrar tareas completadas</button>
-        </div>
-        
-        <p id="recordingTimer" style="margin-top: 10px;">⏱️ Tiempo de grabación: 0 segundos</p>
-        <p id="statusMessage" style="color: blue;">Esperando inicio de sesión...</p>
-
-        <ul id="taskList"></ul>
-        <p class="stats" id="taskStats"></p>
-    </div>
-
-    <section id="buscador" class="section">
-        <h2 class="text-xl font-semibold mb-2">Buscar tareas</h2>
-        <div class="flex items-center gap-2">
-            <input
-            type="text"
-            id="searchInput"
-            placeholder="Escribe para buscar..."
-            class="flex-1 border p-2 rounded"
-            />
-            <button
-            id="searchBtn"
-            class="bg-blue-500 hover:bg-blue-600 text-white px-3 py-2 rounded"
-            >
-            Buscar
-            </button>
-            <button
-            id="clearSearchBtn"
-            class="bg-gray-400 hover:bg-gray-500 text-white px-3 py-2 rounded"
-            >
-            Limpiar
-            </button>
-        </div>
-        <div id="searchResults" class="mt-4"></div>
-    </section>
-
-    <div class="section">
-        <h2>📅 Calendario de tareas</h2>
-        <div class="calendar" id="calendarView"></div>
-    </div>
-    
 </div>
 <script>
-    // ----------------------------------------------------------------------
-    // ⚙️ CONFIGURACIÓN E INICIALIZACIÓN DE FIREBASE (TUS DATOS REALES) ⚙️
-    // ----------------------------------------------------------------------
-    
-    const firebaseConfig = {
-        apiKey: "AIzaSyAh1g7i3vI37nSQYkUi1gSKstRvLIrCVOY",
-        authDomain: "asistenteweb-d1a36.firebaseapp.com",
-        projectId: "asistenteweb-d1a36",
-        storageBucket: "asistenteweb-d1a36.firebasestorage.app",
-        messagingSenderId: "300972571463",
-        appId: "1:300972571463:web:b2259fb2eac4b7bae12a62"
-    };
+    // ----------------------------------------------------------------------
+    // ⚙️ CONFIGURACIÓN E INICIALIZACIÓN DE FIREBASE (TUS DATOS REALES) ⚙️
+    // ----------------------------------------------------------------------
+    
+    const firebaseConfig = {
+        apiKey: "AIzaSyAh1g7i3vI37nSQYkUi1gSKstRvLIrCVOY",
+        authDomain: "asistenteweb-d1a36.firebaseapp.com",
+        projectId: "asistenteweb-d1a36",
+        storageBucket: "asistenteweb-d1a36.firebasestorage.app",
+        messagingSenderId: "300972571463",
+        appId: "1:300972571463:web:b2259fb2eac4b7bae12a62"
+    };
 
-    // Colección y Documento Fijo para todas las tareas
-    const COLLECTION_NAME = "users";
-    const DOCUMENT_ID = "asistente_master_tasks"; 
+    // Colección y Documento Fijo para todas las tareas
+    const COLLECTION_NAME = "users";
+    const DOCUMENT_ID = "asistente_master_tasks"; 
 
-    // Inicializar Firebase con el SDK de compatibilidad (V8 style)
-    const app = firebase.initializeApp(firebaseConfig);
-    const db = app.firestore(); 
-    const auth = app.auth(); 
+    // Inicializar Firebase con el SDK de compatibilidad (V8 style)
+    const app = firebase.initializeApp(firebaseConfig);
+    const db = app.firestore(); 
+    const auth = app.auth(); 
 
-    // ----------------------------------------------------------------------
-    // 🔒 FUNCIONES DE AUTENTICACIÓN Y CONTROL DE VISTA 🔒
-    // ----------------------------------------------------------------------
-    const loginSection = document.getElementById('loginSection');
-    const mainContent = document.getElementById('mainContent');
-    const authMessage = document.getElementById('authMessage');
+    // ----------------------------------------------------------------------
+    // 🔒 FUNCIONES DE AUTENTICACIÓN Y CONTROL DE VISTA 🔒
+    // ----------------------------------------------------------------------
+    const loginSection = document.getElementById('loginSection');
+    const mainContent = document.getElementById('mainContent');
+    const authMessage = document.getElementById('authMessage');
 
-    // FUNCIÓN DE INICIO DE SESIÓN CON GOOGLE
-    function handleLogin() {
-        const provider = new firebase.auth.GoogleAuthProvider();
-        
-        auth.signInWithPopup(provider)
-            .catch((error) => {
-                authMessage.innerText = `Error de ingreso con Google: ${error.message}`;
-            });
-    }
+    // FUNCIÓN DE INICIO DE SESIÓN CON GOOGLE
+    function handleLogin() {
+        const provider = new firebase.auth.GoogleAuthProvider();
+        
+        auth.signInWithPopup(provider)
+            .catch((error) => {
+                authMessage.innerText = `Error de ingreso con Google: ${error.message}`;
+            });
+    }
 
-    // FUNCIÓN DE CIERRE DE SESIÓN
-    function logout() {
-        auth.signOut().then(() => {
-            console.log("Sesión cerrada.");
-        }).catch((error) => {
-            console.error("Error al cerrar sesión: ", error);
-        });
-    }
+    // FUNCIÓN DE CIERRE DE SESIÓN
+    function logout() {
+        auth.signOut().then(() => {
+            console.log("Sesión cerrada.");
+        }).catch((error) => {
+            console.error("Error al cerrar sesión: ", error);
+        });
+    }
 
-    // Escucha el estado de autenticación (el motor de seguridad de la vista)
-    auth.onAuthStateChanged(user => {
-        if (user) {
-            // USUARIO LOGUEADO
-            loginSection.style.display = 'none';
-            mainContent.style.display = 'block';
-            authMessage.innerText = '';
-            loadTasksFromCloud(); 
-        } else {
-            // USUARIO DESLOGUEADO
-            // 💡 ESTA LÍNEA FUE CORREGIDA (de loginContent a loginSection)
-            loginSection.style.display = 'block'; 
-            mainContent.style.display = 'none';
-            tasks = [];
-            renderTasks();
-            renderCalendar();
-        }
-    });
+    // Escucha el estado de autenticación (el motor de seguridad de la vista)
+    auth.onAuthStateChanged(user => {
+        if (user) {
+            // USUARIO LOGUEADO
+            loginSection.style.display = 'none';
+            mainContent.style.display = 'block';
+            authMessage.innerText = '';
+            loadTasksFromCloud(); 
+        } else {
+            // USUARIO DESLOGUEADO
+            // 💡 ESTA LÍNEA FUE CORREGIDA (de loginContent a loginSection)
+            loginSection.style.display = 'block'; 
+            mainContent.style.display = 'none';
+            tasks = [];
+            renderTasks();
+            renderCalendar();
+        }
+    });
 
-    // ----------------------------------------------------------------------
-    // ☁️ FUNCIONES DE SINCRONIZACIÓN EN LA NUBE CON FIREBASE ☁️
-    // ----------------------------------------------------------------------
+    // ----------------------------------------------------------------------
+    // ☁️ FUNCIONES DE SINCRONIZACIÓN EN LA NUBE CON FIREBASE ☁️
+    // ----------------------------------------------------------------------
 
-    let tasks = []; 
-    const statusMessage = document.getElementById('statusMessage');
+    let tasks = []; 
+    const statusMessage = document.getElementById('statusMessage');
 
-    async function saveTasksToCloud() {
-        if (!auth.currentUser) {
-            statusMessage.innerText = "🚨 Error: Debes iniciar sesión para guardar.";
-            return;
-        }
-        
-        try {
-            statusMessage.innerText = "Guardando...";
-            await db.collection(COLLECTION_NAME).doc(DOCUMENT_ID).set({ tasks });
-            console.log("Tareas guardadas en Firebase.");
-            statusMessage.innerText = "Guardado en la nube.";
-        } catch (e) {
-            console.error("Error al guardar en la nube: ", e);
-            statusMessage.innerText = `🚨 Error al guardar: ${e.code || e.message}`;
-        }
-    }
+    async function saveTasksToCloud() {
+        if (!auth.currentUser) {
+            statusMessage.innerText = "🚨 Error: Debes iniciar sesión para guardar.";
+            return;
+        }
+        
+        try {
+            statusMessage.innerText = "Guardando...";
+            await db.collection(COLLECTION_NAME).doc(DOCUMENT_ID).set({ tasks });
+            console.log("Tareas guardadas en Firebase.");
+            statusMessage.innerText = "Guardado en la nube.";
+        } catch (e) {
+            console.error("Error al guardar en la nube: ", e);
+            statusMessage.innerText = `🚨 Error al guardar: ${e.code || e.message}`;
+        }
+    }
 
-    async function loadTasksFromCloud() {
-        if (!auth.currentUser) {
-            return;
-        }
-        
-        try {
-            statusMessage.innerText = "Cargando...";
-            const docSnap = await db.collection(COLLECTION_NAME).doc(DOCUMENT_ID).get();
+    async function loadTasksFromCloud() {
+        if (!auth.currentUser) {
+            return;
+        }
+        
+        try {
+            statusMessage.innerText = "Cargando...";
+            const docSnap = await db.collection(COLLECTION_NAME).doc(DOCUMENT_ID).get();
 
-            if (docSnap.exists) {
-                tasks = docSnap.data().tasks || []; 
-                statusMessage.innerText = "Cargado desde la nube.";
-            } else {
-                tasks = []; 
-                statusMessage.innerText = "Listo (documento inicializado).";
-            }
-        } catch (e) {
-            console.error("Error al cargar desde la nube: ", e);
-            tasks = [];
-            statusMessage.innerText = `🚨 Error de conexión/reglas de Firebase: ${e.code || e.message}.`;
-        }
-        
-        renderTasks();
-        renderCalendar();
-    }
-    
-    function saveData() {
-        saveTasksToCloud(); 
-    }
-    
-    // ----------------------------------------------------------------------
-    // ---- RESTO DE FUNCIONES (Tu lógica de la app) ----
-    // ----------------------------------------------------------------------
-    
-    function addTask(text = null) {
-        const taskInput = document.getElementById('taskInput');
-        const taskDateInput = document.getElementById('taskDate'); 
-        
-        const taskText = text || taskInput.value;
-        const tag = document.getElementById('taskTag').value;
-        const date = taskDateInput.value; 
-        
-        if (taskText.trim()) {
-            tasks.push({ text: taskText.trim(), tag, date, done: false });
-            saveData();
-            
-            if (!text) { 
-                 taskInput.value = '';
-            }
-            taskDateInput.value = '';
-            
-            renderTasks();
-            renderCalendar();
-        }
-    }
+            if (docSnap.exists) {
+                tasks = docSnap.data().tasks || []; 
+                statusMessage.innerText = "Cargado desde la nube.";
+            } else {
+                tasks = []; 
+                statusMessage.innerText = "Listo (documento inicializado).";
+            }
+        } catch (e) {
+            console.error("Error al cargar desde la nube: ", e);
+            tasks = [];
+            statusMessage.innerText = `🚨 Error de conexión/reglas de Firebase: ${e.code || e.message}.`;
+        }
+        
+        renderTasks();
+        renderCalendar();
+        // 🌟 ¡LLAMADA A LA NUEVA FUNCIÓN DE ALERTA!
+        checkForAlerts(); 
+    }
+    
+    function saveData() {
+        saveTasksToCloud(); 
+    }
+    
+    // ----------------------------------------------------------------------
+    // ---- RESTO DE FUNCIONES (Tu lógica de la app) ----
+    // ----------------------------------------------------------------------
+    
+    function addTask(text = null) {
+        const taskInput = document.getElementById('taskInput');
+        const taskDateInput = document.getElementById('taskDate'); 
+        
+        const taskText = text || taskInput.value;
+        const tag = document.getElementById('taskTag').value;
+        const date = taskDateInput.value; 
+        
+        if (taskText.trim()) {
+            tasks.push({ text: taskText.trim(), tag, date, done: false });
+            saveData();
+            
+            if (!text) { 
+                 taskInput.value = '';
+            }
+            taskDateInput.value = '';
+            
+            renderTasks();
+            renderCalendar();
+            // 🌟 Opción: Recargar alertas si se añade una tarea nueva
+            // checkForAlerts(); 
+        }
+    }
 
-    function toggleTask(index) {
-        tasks[index].done = !tasks[index].done;
-        saveData();
-        renderTasks();
-        renderCalendar();
-    }
+    function toggleTask(index) {
+        tasks[index].done = !tasks[index].done;
+        saveData();
+        renderTasks();
+        renderCalendar();
+        // 🌟 Opción: Recargar alertas si se marca una tarea
+        // checkForAlerts(); 
+    }
 
-    function deleteCompletedTasks() {
-        tasks = tasks.filter(t => !t.done);
-        saveData();
-        renderTasks();
-        renderCalendar();
-    }
+    function deleteCompletedTasks() {
+        tasks = tasks.filter(t => !t.done);
+        saveData();
+        renderTasks();
+        renderCalendar();
+    }
 
-    function renderTasks() {
-        const list = document.getElementById('taskList');
-        list.innerHTML = '';
-        
-        const totalTasks = tasks.length;
-        const reversedTasks = [...tasks].reverse(); 
+    function renderTasks() {
+        const list = document.getElementById('taskList');
+        list.innerHTML = '';
+        
+        const totalTasks = tasks.length;
+        const reversedTasks = [...tasks].reverse(); 
 
-        reversedTasks.forEach((task, i) => {
-            const originalIndex = totalTasks - 1 - i; 
-            const taskNumber = i + 1; 
+        reversedTasks.forEach((task, i) => {
+            const originalIndex = totalTasks - 1 - i; 
+            const taskNumber = i + 1; 
 
-            const li = document.createElement('li');
-            li.className = task.done ? 'completed' : '';
-            li.onclick = () => toggleTask(originalIndex); 
-            
-            const tagText = task.tag || 'Sin etiqueta';
-            let styledTag = tagText;
+            const li = document.createElement('li');
+            li.className = task.done ? 'completed' : '';
+            li.onclick = () => toggleTask(originalIndex); 
+            
+            const tagText = task.tag || 'Sin etiqueta';
+            let styledTag = tagText;
 
-            if (tagText === 'Urgente') {
-                styledTag = `<span class="urgent-tag">${tagText}</span>`;
-            }
+            if (tagText === 'Urgente') {
+                styledTag = `<span class="urgent-tag">${tagText}</span>`;
+            }
 
-            li.innerHTML = `${taskNumber}. ${task.text} (${styledTag}) - ${task.date || 'Sin fecha'}`;
-            
-            list.appendChild(li);
-        });
-        
-        const completed = tasks.filter(t => t.done).length;
-        document.getElementById('taskStats').innerText = `Completadas: ${completed} / Pendientes: ${totalTasks - completed}`;
-    }
-    
-    function exportTasks() {
-        if (tasks.length === 0) {
-            alert("No hay tareas para exportar.");
-            return;
-        }
-        
-        const { jsPDF } = window.jspdf;
-        const doc = new jsPDF();
-        
-        let y = 10; 
-        const lineHeight = 7;
-        const pageWidth = doc.internal.pageSize.getWidth();
-        const margin = 10;
-        
-        const title = "REPORTE DE TAREAS ASISTENTE DIARIO";
-        doc.setFontSize(16);
-        doc.text(title, pageWidth / 2, y, { align: 'center' });
-        y += lineHeight * 2;
-        
-        doc.setFontSize(10);
-        doc.setFont(doc.getFont().fontName, 'normal');
+            li.innerHTML = `${taskNumber}. ${task.text} (${styledTag}) - ${task.date || 'Sin fecha'}`;
+            
+            list.appendChild(li);
+        });
+        
+        const completed = tasks.filter(t => t.done).length;
+        document.getElementById('taskStats').innerText = `Completadas: ${completed} / Pendientes: ${totalTasks - completed}`;
+    }
+    
+    function exportTasks() {
+        if (tasks.length === 0) {
+            alert("No hay tareas para exportar.");
+            return;
+        }
+        
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF();
+        
+        let y = 10; 
+        const lineHeight = 7;
+        const pageWidth = doc.internal.pageSize.getWidth();
+        const margin = 10;
+        
+        const title = "REPORTE DE TAREAS ASISTENTE DIARIO";
+        doc.setFontSize(16);
+        doc.text(title, pageWidth / 2, y, { align: 'center' });
+        y += lineHeight * 2;
+        
+        doc.setFontSize(10);
+        doc.setFont(doc.getFont().fontName, 'normal');
 
-        tasks.forEach((t, index) => {
-            const status = t.done ? '[COMPLETADA]' : '[PENDIENTE]';
-            const tag = t.tag ? ` | Etiqueta: ${t.tag}` : '';
-            const date = t.date ? ` | Fecha: ${t.date}` : '';
-            
-            const color = t.done ? [128, 128, 128] : [0, 0, 0]; 
-            doc.setTextColor(...color);
+        tasks.forEach((t, index) => {
+            const status = t.done ? '[COMPLETADA]' : '[PENDIENTE]';
+            const tag = t.tag ? ` | Etiqueta: ${t.tag}` : '';
+            const date = t.date ? ` | Fecha: ${t.date}` : '';
+            
+            const color = t.done ? [128, 128, 128] : [0, 0, 0]; 
+            doc.setTextColor(...color);
 
-            const textLine = `${index + 1}. ${status} ${t.text}${tag}${date}`;
-            
-            if (y + lineHeight > doc.internal.pageSize.getHeight() - margin) {
-                doc.addPage();
-                y = margin; 
-            }
-            
-            doc.text(textLine, margin, y);
-            y += lineHeight;
-        });
+            const textLine = `${index + 1}. ${status} ${t.text}${tag}${date}`;
+            
+            if (y + lineHeight > doc.internal.pageSize.getHeight() - margin) {
+                doc.addPage();
+                y = margin; 
+            }
+            
+            doc.text(textLine, margin, y);
+            y += lineHeight;
+        });
 
-        doc.save("Reporte_Tareas_" + new Date().toISOString().slice(0, 10) + ".pdf");
-    }
+        doc.save("Reporte_Tareas_" + new Date().toISOString().slice(0, 10) + ".pdf");
+    }
 
-    let recordingInterval;
-    let recordingSeconds = 0;
+    let recordingInterval;
+    let recordingSeconds = 0;
 
-    function startDictation() {
-        if (!('SpeechRecognition' in window) && !('webkitSpeechRecognition' in window)) {
-            alert('El reconocimiento de voz no está soportado por tu navegador. Prueba con Chrome o Edge.');
-            return;
-        }
-        
-        const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
-        recognition.lang = 'es-ES';
-        recognition.interimResults = false; 
-        
-        recognition.onstart = function() {
-            recordingSeconds = 0;
-            document.getElementById('recordingTimer').innerText = "🎙️ ESCUCHANDO... (0 segundos)";
-            recordingInterval = setInterval(() => {
-                recordingSeconds++;
-                document.getElementById('recordingTimer').innerText = `🎙️ ESCUCHANDO... (${recordingSeconds} segundos)`;
-            }, 1000);
-        };
-        
-        recognition.onresult = function(event) {
-            const transcript = event.results[0][0].transcript;
-            addTask("🗣️ TAREA DICTADA: " + transcript); 
-        };
-        
-        recognition.onerror = function(event) { 
-            clearInterval(recordingInterval); 
-            document.getElementById('recordingTimer').innerText = `❌ Error en el dictado: ${event.error}`;
-        };
-        
-        recognition.onend = function() { 
-            clearInterval(recordingInterval); 
-            document.getElementById('recordingTimer').innerText = `⏱️ Dictado finalizado. ${recordingSeconds} segundos`;
-        };
+    function startDictation() {
+        if (!('SpeechRecognition' in window) && !('webkitSpeechRecognition' in window)) {
+            alert('El reconocimiento de voz no está soportado por tu navegador. Prueba con Chrome o Edge.');
+            return;
+        }
+        
+        const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
+        recognition.lang = 'es-ES';
+        recognition.interimResults = false; 
+        
+        recognition.onstart = function() {
+            recordingSeconds = 0;
+            document.getElementById('recordingTimer').innerText = "🎙️ ESCUCHANDO... (0 segundos)";
+            recordingInterval = setInterval(() => {
+                recordingSeconds++;
+                document.getElementById('recordingTimer').innerText = `🎙️ ESCUCHANDO... (${recordingSeconds} segundos)`;
+            }, 1000);
+        };
+        
+        recognition.onresult = function(event) {
+            const transcript = event.results[0][0].transcript;
+            addTask("🗣️ TAREA DICTADA: " + transcript); 
+        };
+        
+        recognition.onerror = function(event) { 
+            clearInterval(recordingInterval); 
+            document.getElementById('recordingTimer').innerText = `❌ Error en el dictado: ${event.error}`;
+        };
+        
+        recognition.onend = function() { 
+            clearInterval(recordingInterval); 
+            document.getElementById('recordingTimer').innerText = `⏱️ Dictado finalizado. ${recordingSeconds} segundos`;
+        };
 
-        try {
-             recognition.start();
-        } catch(e) {
-             clearInterval(recordingInterval); 
-             document.getElementById('recordingTimer').innerText = "Error al iniciar el dictado. Es posible que ya esté activo.";
-        }
-    }
+        try {
+             recognition.start();
+        } catch(e) {
+             clearInterval(recordingInterval); 
+             document.getElementById('recordingTimer').innerText = "Error al iniciar el dictado. Es posible que ya esté activo.";
+        }
+    }
 
-    function renderCalendar() {
-        const calendar = document.getElementById('calendarView');
-        calendar.innerHTML = '';
-        const today = new Date();
-        const year = today.getFullYear();
-        const month = today.getMonth();
-        const daysInMonth = new Date(year, month + 1, 0).getDate();
-        
-        const todayStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
-        
-        const dayNames = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes'];
-        
-        calendar.style.gridTemplateColumns = 'repeat(5, 1fr)'; 
+    function renderCalendar() {
+        const calendar = document.getElementById('calendarView');
+        calendar.innerHTML = '';
+        const today = new Date();
+        const year = today.getFullYear();
+        const month = today.getMonth();
+        const daysInMonth = new Date(year, month + 1, 0).getDate();
+        
+        const todayStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+        
+        const dayNames = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes'];
+        
+        calendar.style.gridTemplateColumns = 'repeat(5, 1fr)'; 
 
-        dayNames.forEach(name => {
-            const header = document.createElement('div');
-            header.className = 'day-header';
-            header.style.fontWeight = 'bold';
-            header.style.textAlign = 'center';
-            header.innerText = name; 
-            calendar.appendChild(header);
-        });
+        dayNames.forEach(name => {
+            const header = document.createElement('div');
+            header.className = 'day-header';
+            header.style.fontWeight = 'bold';
+            header.style.textAlign = 'center';
+            header.innerText = name; 
+            calendar.appendChild(header);
+        });
 
-        let firstDayOfMonth = new Date(year, month, 1).getDay(); 
-        
-        if (firstDayOfMonth === 0) firstDayOfMonth = 7; 
-        
-        if (firstDayOfMonth >= 1 && firstDayOfMonth <= 5) {
-            for (let i = 1; i < firstDayOfMonth; i++) {
-                const emptyDay = document.createElement('div');
-                emptyDay.className = 'day';
-                emptyDay.style.background = '#f4f4f4';
-                emptyDay.style.border = 'none';
-                calendar.appendChild(emptyDay);
-            }
-        }
-        
+        let firstDayOfMonth = new Date(year, month, 1).getDay(); 
+        
+        if (firstDayOfMonth === 0) firstDayOfMonth = 7; 
+        
+        if (firstDayOfMonth >= 1 && firstDayOfMonth <= 5) {
+            for (let i = 1; i < firstDayOfMonth; i++) {
+                const emptyDay = document.createElement('div');
+                emptyDay.className = 'day';
+                emptyDay.style.background = '#f4f4f4';
+                emptyDay.style.border = 'none';
+                calendar.appendChild(emptyDay);
+            }
+        }
+        
 
-        for (let d = 1; d <= daysInMonth; d++) {
-            const dateObj = new Date(year, month, d);
-            const dayOfWeek = dateObj.getDay(); 
-            
-            if (dayOfWeek === 0 || dayOfWeek === 6) { 
-                continue; 
-            }
+        for (let d = 1; d <= daysInMonth; d++) {
+            const dateObj = new Date(year, month, d);
+            const dayOfWeek = dateObj.getDay(); 
+            
+            if (dayOfWeek === 0 || dayOfWeek === 6) { 
+                continue; 
+            }
 
-            const monthStr = String(month + 1).padStart(2, '0');
-            const dayStr = String(d).padStart(2, '0');
-            const dateStr = `${year}-${monthStr}-${dayStr}`;
-            
-            const dayDiv = document.createElement('div');
-            dayDiv.className = 'day';
+            const monthStr = String(month + 1).padStart(2, '0');
+            const dayStr = String(d).padStart(2, '0');
+            const dateStr = `${year}-${monthStr}-${dayStr}`;
+            
+            const dayDiv = document.createElement('div');
+            dayDiv.className = 'day';
 
-            if (dateStr === todayStr) {
-                dayDiv.classList.add('current-day');
-            }
+            if (dateStr === todayStr) {
+                dayDiv.classList.add('current-day');
+            }
 
-            const dayNameIndex = dayOfWeek === 0 ? 6 : dayOfWeek - 1; 
-            const dayNameShort = dayNames[dayNameIndex] ? dayNames[dayNameIndex].substring(0, 3) : '';
-            dayDiv.innerHTML = `<strong>${dayNameShort} ${d}</strong><br>`;
-            
-            tasks.filter(t => t.date === dateStr).forEach(t => {
-                const p = document.createElement('p');
-                p.innerText = t.text;
-                p.style.fontSize = '12px';
-                p.style.color = t.done ? 'gray' : '#333';
-                p.style.textDecoration = t.done ? 'line-through' : 'none';
-                dayDiv.appendChild(p);
-            });
-            calendar.appendChild(dayDiv);
-        }
-    }
+            const dayNameIndex = dayOfWeek === 0 ? 6 : dayOfWeek - 1; 
+            const dayNameShort = dayNames[dayNameIndex] ? dayNames[dayNameIndex].substring(0, 3) : '';
+            dayDiv.innerHTML = `<strong>${dayNameShort} ${d}</strong><br>`;
+            
+            tasks.filter(t => t.date === dateStr).forEach(t => {
+                const p = document.createElement('p');
+                p.innerText = t.text;
+                p.style.fontSize = '12px';
+                p.style.color = t.done ? 'gray' : '#333';
+                p.style.textDecoration = t.done ? 'line-through' : 'none';
+                dayDiv.appendChild(p);
+            });
+            calendar.appendChild(dayDiv);
+        }
+    }
 
-    function searchItems() {
-        const query = document.getElementById('searchInput').value.toLowerCase();
-        const results = document.getElementById('searchResults');
-        results.innerHTML = '';
-        
-        if (query.trim() === "") {
-            results.innerHTML = '<p>Por favor, ingrese un término de búsqueda.</p>';
-            return;
-        }
+    function searchItems() {
+        const query = document.getElementById('searchInput').value.toLowerCase();
+        const results = document.getElementById('searchResults');
+        results.innerHTML = '';
+        
+        if (query.trim() === "") {
+            results.innerHTML = '<p>Por favor, ingrese un término de búsqueda.</p>';
+            return;
+        }
 
-        const foundTasks = tasks.filter(t => 
-            t.text.toLowerCase().includes(query) || 
-            (t.tag && t.tag.toLowerCase().includes(query))
-        );
-        
-        if (foundTasks.length > 0) {
-            foundTasks.forEach(t => {
-                const li = document.createElement('li');
-                li.innerText = `TAREA: ${t.text} (${t.tag || 'Sin etiqueta'}) - ${t.date || 'Sin fecha'}`;
-                li.className = t.done ? 'completed' : '';
-                results.appendChild(li);
-            });
-        } else {
-            results.innerHTML = '<p>No se encontraron tareas con ese criterio.</p>';
-        }
-    }
-    
-    // ---- MANEJO DEL BUSCADOR ----
-    const searchInput = document.getElementById("searchInput");
-    const searchResults = document.getElementById("searchResults");
-    const clearSearchBtn = document.getElementById("clearSearchBtn");
-    const searchBtn = document.getElementById('searchBtn');
+        const foundTasks = tasks.filter(t => 
+            t.text.toLowerCase().includes(query) || 
+            (t.tag && t.tag.toLowerCase().includes(query))
+        );
+        
+        if (foundTasks.length > 0) {
+            foundTasks.forEach(t => {
+                const li = document.createElement('li');
+                li.innerText = `TAREA: ${t.text} (${t.tag || 'Sin etiqueta'}) - ${t.date || 'Sin fecha'}`;
+                li.className = t.done ? 'completed' : '';
+                results.appendChild(li);
+            });
+        } else {
+            results.innerHTML = '<p>No se encontraron tareas con ese criterio.</p>';
+        }
+    }
+    
+    // ----------------------------------------------------------------------
+    // 🔔 FUNCIONES PARA LA ALERTA (NUEVAS) 🔔
+    // ----------------------------------------------------------------------
 
-    searchBtn.addEventListener('click', searchItems);
+    function closeAlertModal() {
+        document.getElementById('taskAlertModal').style.display = 'none';
+    }
 
-    clearSearchBtn.addEventListener("click", () => {
-      searchInput.value = "";
-      searchResults.innerHTML = "";
-      if(auth.currentUser) { 
-        loadTasksFromCloud(); 
-      }
-    });
+    function checkForAlerts() {
+        const today = new Date();
+        const todayStr = today.toISOString().slice(0, 10); // YYYY-MM-DD
+        
+        // Calcula la fecha de mañana (para tareas del día siguiente)
+        const tomorrow = new Date(today);
+        tomorrow.setDate(today.getDate() + 1);
+        const tomorrowStr = tomorrow.toISOString().slice(0, 10);
+        
+        // Filtra las tareas pendientes (done: false) con fecha en hoy o mañana
+        const pendingAlerts = tasks.filter(t => 
+            !t.done && (t.date === todayStr || t.date === tomorrowStr)
+        ).sort((a, b) => {
+            // Ordena: Primero las de hoy, luego las de mañana
+            if (a.date === todayStr && b.date === tomorrowStr) return -1;
+            if (a.date === tomorrowStr && b.date === todayStr) return 1;
+            return 0;
+        });
+
+        if (pendingAlerts.length > 0) {
+            const list = document.getElementById('alertTaskList');
+            const header = document.getElementById('alertMessageHeader');
+            list.innerHTML = '';
+            
+            let todayCount = 0;
+            let tomorrowCount = 0;
+
+            pendingAlerts.forEach(task => {
+                const li = document.createElement('li');
+                const dateDisplay = task.date === todayStr ? 'HOY' : 'MAÑANA';
+                
+                if (task.date === todayStr) todayCount++;
+                if (task.date === tomorrowStr) tomorrowCount++;
+
+                let text = `${dateDisplay} (${task.date}): ${task.text}`;
+                if (task.tag === 'Urgente') {
+                    text = `⚠️ ¡URGENTE! ${text}`;
+                }
+                li.innerText = text;
+                list.appendChild(li);
+            });
+
+            // Crea un mensaje de encabezado más informativo
+            let headerText = "Tienes ";
+            if (todayCount > 0) {
+                headerText += `<span style="font-weight: bold; color: #d32f2f;">${todayCount} tarea(s) para HOY</span>`;
+            }
+            if (todayCount > 0 && tomorrowCount > 0) {
+                headerText += " y ";
+            }
+            if (tomorrowCount > 0) {
+                headerText += `<span style="font-weight: bold; color: #1976d2;">${tomorrowCount} tarea(s) para MAÑANA</span>`;
+            }
+            
+            header.innerHTML = headerText;
+
+            // Muestra el modal
+            document.getElementById('taskAlertModal').style.display = 'block';
+        }
+    }
+
+    // ---- MANEJO DEL BUSCADOR ----
+    const searchInput = document.getElementById("searchInput");
+    const searchResults = document.getElementById("searchResults");
+    const clearSearchBtn = document.getElementById("clearSearchBtn");
+    const searchBtn = document.getElementById('searchBtn');
+
+    searchBtn.addEventListener('click', searchItems);
+
+    clearSearchBtn.addEventListener("click", () => {
+      searchInput.value = "";
+      searchResults.innerHTML = "";
+      if(auth.currentUser) { 
+        loadTasksFromCloud(); 
+      }
+    });
 </script>
 </body>
 </html>
