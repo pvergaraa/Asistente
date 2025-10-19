@@ -205,7 +205,7 @@
     // Inicializar Firebase con el SDK de compatibilidad (V8 style)
     const app = firebase.initializeApp(firebaseConfig);
     const db = app.firestore(); 
-    const auth = app.auth(); // 💡 ESTO ES CRÍTICO: Definir 'auth'
+    const auth = app.auth(); 
 
     // ----------------------------------------------------------------------
     // 🔒 FUNCIONES DE AUTENTICACIÓN Y CONTROL DE VISTA 🔒
@@ -243,7 +243,8 @@
             loadTasksFromCloud(); 
         } else {
             // USUARIO DESLOGUEADO
-            loginSection.style.display = 'block'; // Usamos loginSection aquí
+            // 💡 ESTA LÍNEA FUE CORREGIDA (de loginContent a loginSection)
+            loginSection.style.display = 'block'; 
             mainContent.style.display = 'none';
             tasks = [];
             renderTasks();
