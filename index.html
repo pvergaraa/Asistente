@@ -345,6 +345,14 @@
                     Pendiente
                 </button>
             </div>
+            <div id="timeSummary" style="padding: 10px; margin-bottom: 15px; background: #e0f7fa; border-radius: 5px; border-left: 5px solid #00bcd4;">
+                <p style="margin: 0; font-weight: bold;">
+                    Tiempo total de trabajo acumulado: <span id="totalTimeTracked">00:00:00</span>
+                </p>
+                <p style="margin: 5px 0 0 0; font-size: 0.9em;">
+                    Tareas con tiempo registrado: <span id="tasksWithTimeCount">0</span>
+                </p>
+            </div>
             <ul id="taskList"></ul>
             <p class="stats" id="taskStats"></p>
         </div>
@@ -416,7 +424,7 @@
     let timerUpdateInterval;
     let currentCalendarDate = new Date(); 
     let editingTaskId = null; 
-    let currentTagFilter = null; // **NUEVA: Filtro de etiqueta actual (null = todas)**
+    let currentTagFilter = null; // Filtro de etiqueta actual (null = todas)
 
     // Elementos DOM
     const loginSection = document.getElementById('loginSection');
@@ -597,9 +605,36 @@
         renderTasks();
         renderCalendar();
         checkUpcomingTasks(); 
-        highlightFilterButton(currentTagFilter); // **NUEVA LÍNEA: Resaltar filtro al cargar**
+        highlightFilterButton(currentTagFilter); 
     }
     
+    // ----------------------------------------------------------------------
+    // 📊 FUNCIONES DE ESTADÍSTICAS (Paso 3.2) 📊
+    // ----------------------------------------------------------------------
+
+    function updateTimeSummary() {
+        let totalMs = 0;
+        let tasksWithTime = 0;
+
+        tasks.forEach(t => {
+            let currentElapsedTime = t.elapsedTime || 0;
+            
+            // Si la tarea está corriendo, añade la diferencia desde startTime hasta ahora
+            if (t.startTime !== null) {
+                currentElapsedTime += (Date.now() - t.startTime);
+            }
+
+            totalMs += currentElapsedTime;
+            
+            if (currentElapsedTime > 0) {
+                tasksWithTime++;
+            }
+        });
+
+        document.getElementById('totalTimeTracked').innerText = formatTime(totalMs);
+        document.getElementById('tasksWithTimeCount').innerText = tasksWithTime;
+    }
+
     // ----------------------------------------------------------------------
     // ⏱️ FUNCIONES DEL TIME TRACKER ⏱️
     // ----------------------------------------------------------------------
@@ -639,7 +674,10 @@
             clearInterval(timerUpdateInterval);
         }
         if (auth.currentUser) {
-            timerUpdateInterval = setInterval(renderTasks, 1000); 
+            timerUpdateInterval = setInterval(() => {
+                renderTasks(); 
+                updateTimeSummary(); // Asegura que el resumen se actualice cada segundo
+            }, 1000); 
         }
     }
 
@@ -964,6 +1002,9 @@
         const allCompleted = tasks.filter(t => t.done).length;
         const allTotal = tasks.length;
         document.getElementById('taskStats').innerText = `Completadas: ${allCompleted} / Pendientes: ${allTotal - allCompleted} (Mostrando: ${totalTasksRendered} tareas)`;
+        
+        // **NUEVA LÍNEA:**
+        updateTimeSummary();
     }
     
     // ---- EXPORTAR TAREAS (A PDF con jsPDF) ----
