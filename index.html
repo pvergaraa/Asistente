@@ -2,9 +2,9 @@
 <html lang="es">
 <head>
 <meta charset="utf-8"/>
-<title>Asistente Diario - Sincronizado y Seguro</title>
+<title>Asistente Diario PRO - Versión Unificada (Cloud + Funciones Avanzadas)</title>
 <style>
-    /* Diseño Centrado */
+    /* Diseño Base */
     body { 
         font-family: Arial, sans-serif; 
         margin: 20px auto; 
@@ -34,7 +34,7 @@
     }
     /* ======================================================= */
 
-    /* Estilo para el botón de Google */
+    /* Estilo para el botón de Google (Login) */
     .google-btn { 
         padding: 10px 15px; 
         margin: 5px 5px 0 0; 
@@ -46,18 +46,28 @@
         font-weight: bold;
     }
     .google-btn:hover { opacity: 0.9; }
-    /* Estilo para los botones generales (Agregar Tarea, Exportar, etc.) */
+    
+    /* Estilo para los botones generales */
     button { padding: 10px 15px; margin: 5px 5px 0 0; border: none; border-radius: 5px; cursor: pointer; background: #1976d2; color: white; }
     button:hover { opacity: 0.9; }
     
-    ul { list-style-type: none; padding: 0; }
+    /* MODIFICACIÓN CLAVE: REGLAS PARA EL SCROLL EN LA LISTA UL */
+    ul { 
+        list-style-type: none; 
+        padding: 0; 
+        max-height: 400px; /* Altura máxima de la lista */
+        overflow-y: auto;  /* Habilita el scroll vertical */
+        border: 1px solid #ccc; /* Borde para delimitar el área con scroll */
+        padding-right: 10px; /* Espacio para el scroll */
+    }
+
     li { 
         margin: 5px 0; 
         padding: 5px; 
         background: #eaeaea; 
         border-radius: 5px; 
         cursor: pointer; 
-        white-space: normal; 
+        white-space: normal;
     }
     .completed { text-decoration: line-through; color: gray; }
     .calendar { display: grid; grid-template-columns: repeat(5, 1fr); gap: 5px; } 
@@ -78,76 +88,66 @@
         align-items: flex-start;
         justify-content: space-between; 
     }
-    #deleteBtn {
-        margin-left: auto; 
-    }
     
     .urgent-tag {
         color: red;
         font-weight: bold;
     }
 
-    /* ESTILOS PARA EL POPUP DE ALERTA (MODAL) */
-    .alert-modal {
-        display: none; /* Oculto por defecto */
-        position: fixed;
-        z-index: 1000;
-        left: 0;
-        top: 0;
-        width: 100%;
-        height: 100%;
-        overflow: auto;
-        background-color: rgba(0,0,0,0.4); 
+    /* ESTILOS NUEVOS: Etiqueta y Fecha lado a lado*/
+    .task-inputs-row {
+        display: flex; 
+        gap: 10px;    
+        margin: 5px 0 10px 0; 
     }
 
-    .alert-content {
-        background-color: #fefefe;
-        margin: 15% auto; 
-        padding: 20px;
-        border: 1px solid #888;
-        width: 80%;
-        max-width: 500px;
-        border-radius: 10px;
-        box-shadow: 0 4px 8px 0 rgba(0,0,0,0.2), 0 6px 20px 0 rgba(0,0,0,0.19);
+    .task-inputs-row select,
+    .task-inputs-row input[type="date"] {
+        width: 50%; 
+        margin: 0;  
     }
 
-    .alert-content h3 {
-        color: #d32f2f;
-        margin-top: 0;
-        border-bottom: 2px solid #eee;
-        padding-bottom: 10px;
-    }
-
-    .alert-content ul {
-        list-style-type: disc;
-        margin-left: 20px;
-        max-height: 200px;
-        overflow-y: auto;
-        padding-right: 10px;
-    }
-
-    .alert-content li {
-        background: none;
-        padding: 5px 0;
-        margin: 2px 0;
-        border-bottom: 1px dotted #ccc;
-        cursor: default;
-    }
-
-    .alert-close {
-        color: #aaa;
-        float: right;
-        font-size: 28px;
+    /* ESTILOS DEL NUEVO BANNER DE ALERTA */
+    .alert-banner {
+        padding: 15px;
+        margin-bottom: 20px;
+        border: 1px solid transparent;
+        border-radius: 4px;
+        color: #856404; 
+        background-color: #fff3cd; 
+        border-color: #ffeeba; 
         font-weight: bold;
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start; 
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    }
+    .alert-banner button {
+        background: transparent;
+        color: #856404;
+        border: none;
+        padding: 5px 10px;
+        cursor: pointer;
+        font-weight: bold;
+        font-size: 1.2em;
+        margin-left: 15px;
+        line-height: 1;
+    }
+    .alert-banner button:hover {
+        opacity: 0.7;
+    }
+    .task-list-summary {
+        font-size: 0.9em;
+        margin-top: 5px;
+        white-space: pre-wrap; 
+        font-weight: normal; 
     }
 
-    .alert-close:hover,
-    .alert-close:focus {
-        color: #000;
-        text-decoration: none;
-        cursor: pointer;
+    /* Estilo para las tareas de mañana en el calendario */
+    .tomorrow-task {
+        font-weight: bold;
+        color: orange;
     }
-    /* FIN DE ESTILOS DE ALERTA */
 </style>
 
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
@@ -159,7 +159,7 @@
 <body>
     <div id="loginSection" class="section" style="max-width: 400px; margin: 50px auto; display: block;">
         <h2>🔒 Iniciar Sesión</h2>
-        <p>Usa tu cuenta de Google (la misma que usas en Firebase) para acceder.</p>
+        <p>Usa tu cuenta de Google para acceder a tus tareas sincronizadas.</p>
         
         <button onclick="handleLogin()" class="google-btn">
             🚀 Iniciar Sesión con Google
@@ -167,104 +167,98 @@
         
         <p id="authMessage" style="color:red; margin-top:10px;"></p>
     </div>
+    
     <div id="mainContent" style="display: none;">
     
-    <div class="header-container">
-        <h1>🗓️ Asistente Diario - PVergaraA</h1>
-        <button onclick="logout()" class="logout-btn">
-            🚪 Salir
-        </button> 
-    </div>
-    <p id="fecha-hora"></p>
+        <div class="header-container">
+            <h1>🗓️ Asistente Diario PRO - PVergaraA</h1>
+            <button onclick="logout()" class="logout-btn">
+                🚪 Salir
+            </button> 
+        </div>
 
-
-    <div class="section">
-        <h2>✅ Tareas</h2>
-        <input id="taskInput" placeholder="Escribe una tarea..." type="text"/>
-        <select id="taskTag">
-            <option value="">Etiqueta</option>
-            <option value="Urgente">Urgente</option>
-            <option value="Reunión">Reunión</option>
-            <option value="Pendiente">Pendiente</option>
-        </select>
-        <input id="taskDate" type="date"/>
+        <div id="upcomingTasksBanner" style="display: none;" class="alert-banner">
+        </div>
         
-        <div class="task-buttons">
-            <div>
-                <button onclick="addTask()">Agregar tarea</button>
-                <button onclick="startDictation()">🎙️ Comenzar dictado</button>
-                <button onclick="exportTasks()">Exportar tareas</button>
+        <p id="fecha-hora"></p>
+
+        <div class="section">
+            <h2>✅ Tareas</h2>
+            <input id="taskInput" placeholder="Escribe una tarea..." type="text"/>
+            
+            <div class="task-inputs-row">
+                <select id="taskTag">
+                    <option value="">Etiqueta</option>
+                    <option value="Urgente">Urgente</option>
+                    <option value="Reunión">Reunión</option>
+                    <option value="Importante">Importante</option>
+                    <option value="Pendiente">Pendiente</option>
+                </select>
+                <input id="taskDate" type="date"/>
             </div>
-            <button id="deleteBtn" style="background:#d32f2f" onclick="deleteCompletedTasks()">🗑️ Borrar tareas completadas</button>
+            
+            <div class="task-buttons">
+                <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                    <button onclick="exportTasks()">Exportar tareas</button>
+                    <button onclick="openBackupWindow()" style="background:#ff9800">📂 Respaldo completadas</button> 
+                </div>
+                
+                <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                    <button onclick="addTask()">Agregar tarea</button>
+                    <button onclick="startDictation()">🎙️ Comenzar dictado</button>
+                    <button id="deleteBtn" style="background:#d32f2f" onclick="deleteCompletedTasks()">🗑️ Borrar completadas</button>
+                </div>
+            </div>
+            
+            <p id="recordingTimer" style="margin-top: 10px; text-align: right;">⏱️ Tiempo de grabación: 0 segundos</p>
+            <p id="statusMessage" style="color: blue;">Esperando inicio de sesión...</p>
+
+            <ul id="taskList"></ul>
+            <p class="stats" id="taskStats"></p>
         </div>
-        
-        <p id="recordingTimer" style="margin-top: 10px;">⏱️ Tiempo de grabación: 0 segundos</p>
-        <p id="statusMessage" style="color: blue;">Esperando inicio de sesión...</p>
 
-        <ul id="taskList"></ul>
-        <p class="stats" id="taskStats"></p>
-    </div>
+        <section id="buscador" class="section">
+            <h2>Buscar tareas</h2>
+            <div style="display: flex; align-items: center; gap: 10px;">
+                <input
+                type="text"
+                id="searchInput"
+                placeholder="Escribe para buscar..."
+                style="flex-grow: 1;"
+                />
+                <button
+                id="searchBtn"
+                >
+                Buscar
+                </button>
+                <button
+                id="clearSearchBtn"
+                style="background:#6c757d"
+                >
+                Limpiar
+                </button>
+            </div>
+            <div id="searchResults" class="mt-4"></div>
+        </section>
 
-    <section id="buscador" class="section">
-        <h2 class="text-xl font-semibold mb-2">Buscar tareas</h2>
-        <div class="flex items-center gap-2">
-            <input
-            type="text"
-            id="searchInput"
-            placeholder="Escribe para buscar..."
-            class="flex-1 border p-2 rounded"
-            />
-            <button
-            id="searchBtn"
-            class="bg-blue-500 hover:bg-blue-600 text-white px-3 py-2 rounded"
-            >
-            Buscar
-            </button>
-            <button
-            id="clearSearchBtn"
-            class="bg-gray-400 hover:bg-gray-500 text-white px-3 py-2 rounded"
-            >
-            Limpiar
-            </button>
+        <div class="section">
+            <h2>📅 Calendario de tareas</h2>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                <button onclick="changeMonth(-1)" style="background: #6c757d;">&lt; Mes Anterior</button>
+                <h3 id="currentMonthDisplay" style="margin: 0;"></h3>
+                <button onclick="changeMonth(1)" style="background: #6c757d;">Mes Siguiente &gt;</button>
+            </div>
+            <div class="calendar" id="calendarView"></div>
         </div>
-        <div id="searchResults" class="mt-4"></div>
-    </section>
-
-    <div class="section">
-        <h2>📅 Calendario de tareas</h2>
-        <div class="calendar" id="calendarView"></div>
-    </div>
     
-</div>
-
-<div id="taskAlertModal" class="alert-modal">
-    <div class="alert-content">
-        <span class="alert-close" onclick="closeAlertModal()">&times;</span>
-        <h3>🔔 Tareas Próximas o de Hoy</h3>
-        <p id="alertMessageHeader"></p>
-        <ul id="alertTaskList">
-            </ul>
-        <button onclick="closeAlertModal()" style="margin-top: 15px;">Entendido</button>
     </div>
-</div>
+
 <script>
-    // Función de fecha/hora movida aquí para garantizar que se ejecute después de cargar el HTML.
-    function mostrarFechaHora() {
-        const ahora = new Date();
-        const opciones = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
-        const fecha = ahora.toLocaleDateString('es-ES', opciones);
-        const hora = ahora.toLocaleTimeString('es-ES');
-        document.getElementById("fecha-hora").innerHTML = `${fecha} - ${hora}`;
-    }
-    // Llama a la función una vez al inicio y luego cada 1000ms.
-    mostrarFechaHora();
-    setInterval(mostrarFechaHora, 1000);
-
-
     // ----------------------------------------------------------------------
     // ⚙️ CONFIGURACIÓN E INICIALIZACIÓN DE FIREBASE (TUS DATOS REALES) ⚙️
     // ----------------------------------------------------------------------
     
+    // ** IMPORTANTE: REEMPLAZA ESTO CON TUS CREDENCIALES REALES DE FIREBASE **
     const firebaseConfig = {
         apiKey: "AIzaSyAh1g7i3vI37nSQYkUi1gSKstRvLIrCVOY",
         authDomain: "asistenteweb-d1a36.firebaseapp.com",
@@ -274,33 +268,89 @@
         appId: "1:300972571463:web:b2259fb2eac4b7bae12a62"
     };
 
-    // Colección y Documento Fijo para todas las tareas
+    // Colección y Documentos Fijos para todas las tareas
     const COLLECTION_NAME = "users";
-    const DOCUMENT_ID = "asistente_master_tasks"; 
+    const DOCUMENT_ID = "asistente_master_tasks"; // Tareas principales
+    const BACKUP_DOCUMENT_ID = "asistente_backup_tasks"; // Tareas de respaldo
 
     // Inicializar Firebase con el SDK de compatibilidad (V8 style)
     const app = firebase.initializeApp(firebaseConfig);
     const db = app.firestore(); 
     const auth = app.auth(); 
 
-    // ----------------------------------------------------------------------
-    // 🔒 FUNCIONES DE AUTENTICACIÓN Y CONTROL DE VISTA 🔒
-    // ----------------------------------------------------------------------
+    // Variables globales
+    let tasks = []; // Tareas activas
+    let completedTasksBackup = []; // Tareas de respaldo
+    let timerUpdateInterval;
+    let currentCalendarDate = new Date(); 
+
+    // Elementos DOM
     const loginSection = document.getElementById('loginSection');
     const mainContent = document.getElementById('mainContent');
     const authMessage = document.getElementById('authMessage');
+    const statusMessage = document.getElementById('statusMessage');
 
-    // FUNCIÓN DE INICIO DE SESIÓN CON GOOGLE
+
+    // ----------------------------------------------------------------------
+    // 💻 FUNCIONES AUXILIARES 💻
+    // ----------------------------------------------------------------------
+
+    function formatDateToDisplay(dateStr) {
+        if (!dateStr || dateStr.length !== 10) return 'Sin fecha';
+        const parts = dateStr.split('-'); // [YYYY, MM, DD]
+        if (parts.length === 3) {
+            return `${parts[2]}-${parts[1]}-${parts[0]}`; // DD-MM-YYYY
+        }
+        return dateStr;
+    }
+
+    function formatTime(ms) {
+        if (ms === 0 || typeof ms !== 'number') return "00:00:00";
+        const totalSeconds = Math.floor(ms / 1000);
+        const hours = String(Math.floor(totalSeconds / 3600)).padStart(2, '0');
+        const minutes = String(Math.floor((totalSeconds % 3600) / 60)).padStart(2, '0');
+        const seconds = String(totalSeconds % 60).padStart(2, '0');
+        return `${hours}:${minutes}:${seconds}`;
+    }
+
+    function getTomorrowDateStr() {
+        const tomorrow = new Date();
+        tomorrow.setDate(tomorrow.getDate() + 1);
+        const year = tomorrow.getFullYear();
+        const month = String(tomorrow.getMonth() + 1).padStart(2, '0');
+        const day = String(tomorrow.getDate()).padStart(2, '0');
+        
+        return { 
+            internal: `${year}-${month}-${day}`, 
+            display: `${day}-${month}-${year}` 
+        };
+    }
+    
+    function mostrarFechaHora() {
+        const ahora = new Date();
+        const opcionesFecha = { year: 'numeric', month: '2-digit', day: '2-digit' };
+        const fecha = ahora.toLocaleDateString('es-ES', opcionesFecha); // DD/MM/YYYY
+        const diaSemanaOpciones = { weekday: 'long' };
+        const diaSemana = ahora.toLocaleDateString('es-ES', diaSemanaOpciones);
+        const hora = ahora.toLocaleTimeString('es-ES');
+        const fechaFormateada = fecha.replace(/\//g, '-'); 
+        document.getElementById("fecha-hora").innerHTML = `${diaSemana}, ${fechaFormateada} - ${hora}`;
+    }
+    mostrarFechaHora();
+    setInterval(mostrarFechaHora, 1000);
+
+    // ----------------------------------------------------------------------
+    // 🔒 FUNCIONES DE AUTENTICACIÓN Y CONTROL DE VISTA 🔒
+    // ----------------------------------------------------------------------
+
     function handleLogin() {
         const provider = new firebase.auth.GoogleAuthProvider();
-        
         auth.signInWithPopup(provider)
             .catch((error) => {
                 authMessage.innerText = `Error de ingreso con Google: ${error.message}`;
             });
     }
 
-    // FUNCIÓN DE CIERRE DE SESIÓN
     function logout() {
         auth.signOut().then(() => {
             console.log("Sesión cerrada.");
@@ -309,21 +359,25 @@
         });
     }
 
-    // Escucha el estado de autenticación (el motor de seguridad de la vista)
     auth.onAuthStateChanged(user => {
         if (user) {
-            // USUARIO LOGUEADO
             loginSection.style.display = 'none';
             mainContent.style.display = 'block';
             authMessage.innerText = '';
-            loadTasksFromCloud(); 
+            loadDataFromCloud(); // Cargar Tareas y Respaldo
+            startTimerInterval(); 
         } else {
-            // USUARIO DESLOGUEADO
             loginSection.style.display = 'block'; 
             mainContent.style.display = 'none';
             tasks = [];
+            completedTasksBackup = [];
+            if (timerUpdateInterval) { 
+                clearInterval(timerUpdateInterval); 
+            }
             renderTasks();
             renderCalendar();
+            document.getElementById('upcomingTasksBanner').style.display='none';
+            statusMessage.innerText = "Esperando inicio de sesión...";
         }
     });
 
@@ -331,10 +385,7 @@
     // ☁️ FUNCIONES DE SINCRONIZACIÓN EN LA NUBE CON FIREBASE ☁️
     // ----------------------------------------------------------------------
 
-    let tasks = []; 
-    const statusMessage = document.getElementById('statusMessage');
-
-    async function saveTasksToCloud() {
+    async function saveData() {
         if (!auth.currentUser) {
             statusMessage.innerText = "🚨 Error: Debes iniciar sesión para guardar.";
             return;
@@ -342,8 +393,12 @@
         
         try {
             statusMessage.innerText = "Guardando...";
+            // Guardar Tareas Principales
             await db.collection(COLLECTION_NAME).doc(DOCUMENT_ID).set({ tasks });
-            console.log("Tareas guardadas en Firebase.");
+            // Guardar Tareas de Respaldo
+            await db.collection(COLLECTION_NAME).doc(BACKUP_DOCUMENT_ID).set({ completedTasksBackup });
+
+            console.log("Datos guardados en Firebase.");
             statusMessage.innerText = "Guardado en la nube.";
         } catch (e) {
             console.error("Error al guardar en la nube: ", e);
@@ -351,41 +406,81 @@
         }
     }
 
-    async function loadTasksFromCloud() {
+    async function loadDataFromCloud() {
         if (!auth.currentUser) {
             return;
         }
         
         try {
             statusMessage.innerText = "Cargando...";
+            
+            // Cargar Tareas Principales
             const docSnap = await db.collection(COLLECTION_NAME).doc(DOCUMENT_ID).get();
+            tasks = docSnap.exists ? docSnap.data().tasks || [] : []; 
 
-            if (docSnap.exists) {
-                tasks = docSnap.data().tasks || []; 
-                statusMessage.innerText = "Cargado desde la nube.";
-            } else {
-                tasks = []; 
-                statusMessage.innerText = "Listo (documento inicializado).";
-            }
+            // Cargar Tareas de Respaldo
+            const backupSnap = await db.collection(COLLECTION_NAME).doc(BACKUP_DOCUMENT_ID).get();
+            completedTasksBackup = backupSnap.exists ? backupSnap.data().completedTasksBackup || [] : []; 
+            
+            cleanOldBackups(); // Limpiar respaldos al cargar
+            statusMessage.innerText = "Cargado desde la nube.";
+
         } catch (e) {
             console.error("Error al cargar desde la nube: ", e);
             tasks = [];
+            completedTasksBackup = [];
             statusMessage.innerText = `🚨 Error de conexión/reglas de Firebase: ${e.code || e.message}.`;
         }
         
         renderTasks();
         renderCalendar();
-        checkForAlerts(); 
-    }
-    
-    function saveData() {
-        saveTasksToCloud(); 
+        checkUpcomingTasks(); 
     }
     
     // ----------------------------------------------------------------------
-    // ---- RESTO DE FUNCIONES (Lógica de la app) ----
+    // ⏱️ FUNCIONES DEL TIME TRACKER ⏱️
     // ----------------------------------------------------------------------
-    
+
+    function toggleTimer(originalIndex) {
+        const task = tasks[originalIndex];
+        const now = Date.now();
+
+        // Inicializar si no existen
+        if (typeof task.elapsedTime === 'undefined') {
+             task.elapsedTime = 0;
+             task.startTime = null;
+        }
+        if (typeof task.startTime === 'undefined') task.startTime = null;
+
+
+        if (task.startTime === null) {
+            // INICIAR: Guardar el tiempo actual
+            task.startTime = now;
+        } else {
+            // DETENER: Calcular y acumular el tiempo transcurrido
+            const duration = now - task.startTime;
+            task.elapsedTime = (task.elapsedTime || 0) + duration;
+            task.startTime = null; // Reiniciar el contador de inicio
+        }
+
+        saveData();
+        renderTasks();
+    }
+
+    function startTimerInterval() {
+        if (timerUpdateInterval) {
+            clearInterval(timerUpdateInterval);
+        }
+        if (auth.currentUser) {
+            timerUpdateInterval = setInterval(renderTasks, 1000); 
+        }
+    }
+
+
+    // ----------------------------------------------------------------------
+    // ---- LÓGICA DE LA APLICACIÓN ----
+    // ----------------------------------------------------------------------
+
     function addTask(text = null) {
         const taskInput = document.getElementById('taskInput');
         const taskDateInput = document.getElementById('taskDate'); 
@@ -395,7 +490,14 @@
         const date = taskDateInput.value; 
         
         if (taskText.trim()) {
-            tasks.push({ text: taskText.trim(), tag, date, done: false });
+            tasks.push({ 
+                text: taskText.trim(), 
+                tag, 
+                date, 
+                done: false,
+                startTime: null,      
+                elapsedTime: 0        
+            });
             saveData();
             
             if (!text) { 
@@ -405,21 +507,65 @@
             
             renderTasks();
             renderCalendar();
+            checkUpcomingTasks();
         }
     }
 
     function toggleTask(index) {
         tasks[index].done = !tasks[index].done;
+
+        // Si se completa, detener el cronómetro y acumular tiempo
+        if (tasks[index].done && tasks[index].startTime !== null) {
+            const now = Date.now();
+            const duration = now - tasks[index].startTime;
+            tasks[index].elapsedTime = (tasks[index].elapsedTime || 0) + duration;
+            tasks[index].startTime = null;
+        }
+        
+        // Si se descompleta, asegurar que startTime sea null si no se quiere que corra al inicio.
+        if (!tasks[index].done) {
+            tasks[index].startTime = null; 
+        }
+
         saveData();
         renderTasks();
         renderCalendar();
+        checkUpcomingTasks();
     }
 
+    // MODIFICADO: Mover tareas completadas a la lista de respaldo antes de eliminarlas
     function deleteCompletedTasks() {
+        if (!auth.currentUser) return;
+
+        const tasksToBackup = tasks
+            .filter(t => t.done)
+            .map(t => ({
+                ...t,
+                id: Date.now() + Math.random(), // ID único
+                deletedDate: new Date().toISOString().slice(0, 10) // Fecha de borrado
+            }));
+
+        if (tasksToBackup.length === 0) {
+            alert("No hay tareas completadas para borrar.");
+            return;
+        }
+
+        // 1. Agregar las tareas a la lista de respaldo
+        completedTasksBackup.push(...tasksToBackup);
+        
+        // 2. Filtrar las tareas que NO están completadas
         tasks = tasks.filter(t => !t.done);
-        saveData();
+        
+        // 3. Guardar ambas listas
+        saveData(); 
+        
+        // 4. Limpiar los respaldos viejos
+        cleanOldBackups();
+
+        // 5. Renderizar
         renderTasks();
-        renderCalendar();
+        renderCalendar(); 
+        checkUpcomingTasks(); 
     }
 
     function renderTasks() {
@@ -427,15 +573,25 @@
         list.innerHTML = '';
         
         const totalTasks = tasks.length;
-        const reversedTasks = [...tasks].reverse(); 
 
-        reversedTasks.forEach((task, i) => {
-            const originalIndex = totalTasks - 1 - i; 
+        // 1. Asignar índice original para ordenamiento estable
+        const allTasksWithIndices = tasks.map((t, index) => ({...t, originalIndex: index}));
+
+        // 2. Separar y ordenar (Pendientes: más nueva arriba / Completadas: más nueva arriba, al final)
+        let pendingTasksWithIndex = allTasksWithIndices.filter(t => !t.done);
+        let completedTasksWithIndex = allTasksWithIndices.filter(t => t.done);
+        
+        pendingTasksWithIndex.sort((a, b) => b.originalIndex - a.originalIndex); // Más nueva (índice alto) primero
+        completedTasksWithIndex.sort((a, b) => b.originalIndex - a.originalIndex);
+        
+        const sortedTasks = [...pendingTasksWithIndex, ...completedTasksWithIndex];
+        
+        sortedTasks.forEach((task, i) => {
+            const originalIndex = task.originalIndex; 
             const taskNumber = i + 1; 
 
             const li = document.createElement('li');
             li.className = task.done ? 'completed' : '';
-            li.onclick = () => toggleTask(originalIndex); 
             
             const tagText = task.tag || 'Sin etiqueta';
             let styledTag = tagText;
@@ -444,7 +600,54 @@
                 styledTag = `<span class="urgent-tag">${tagText}</span>`;
             }
 
-            li.innerHTML = `${taskNumber}. ${task.text} (${styledTag}) - ${task.date || 'Sin fecha'}`;
+            const displayDate = formatDateToDisplay(task.date);
+
+            // ----------------------------------------------------
+            // ⏱️ LÓGICA DE TIEMPO Y BOTÓN
+            // ----------------------------------------------------
+            if (typeof task.elapsedTime === 'undefined') task.elapsedTime = 0;
+            if (typeof task.startTime === 'undefined') task.startTime = null;
+
+            let currentElapsedTime = task.elapsedTime || 0; 
+            let timerButtonHTML = '';
+            let timerDisplay = '';
+            
+            if (!task.done) {
+                if (task.startTime !== null) {
+                    currentElapsedTime += (Date.now() - task.startTime);
+                    
+                    timerButtonHTML = `
+                        <button 
+                            style="background: #d32f2f; margin: 0; padding: 5px 10px; font-weight: bold;" 
+                            onclick="event.stopPropagation(); toggleTimer(${originalIndex})">
+                            ⏹️ Detener
+                        </button>
+                    `;
+                } else {
+                    timerButtonHTML = `
+                        <button 
+                            style="background: #388e3c; margin: 0; padding: 5px 10px;" 
+                            onclick="event.stopPropagation(); toggleTimer(${originalIndex})">
+                            ▶️ Iniciar
+                        </button>
+                    `;
+                }
+                timerDisplay = ` | Tiempo: <strong>${formatTime(currentElapsedTime)}</strong>`;
+            } else {
+                 timerDisplay = ` | Tiempo Total: <strong>${formatTime(currentElapsedTime)}</strong>`;
+                 timerButtonHTML = ``; 
+            }
+            
+            // Estructura del LI (Tarea + Botón de Cronómetro + Display de Tiempo)
+            li.innerHTML = `
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <span onclick="toggleTask(${originalIndex})" style="flex-grow: 1;">
+                        ${taskNumber}. ${task.text} (${styledTag}) - ${displayDate}
+                        ${timerDisplay}
+                    </span>
+                    ${timerButtonHTML}
+                </div>
+            `;
             
             list.appendChild(li);
         });
@@ -453,6 +656,7 @@
         document.getElementById('taskStats').innerText = `Completadas: ${completed} / Pendientes: ${totalTasks - completed}`;
     }
     
+    // ---- EXPORTAR TAREAS (A PDF con jsPDF) ----
     function exportTasks() {
         if (tasks.length === 0) {
             alert("No hay tareas para exportar.");
@@ -467,7 +671,7 @@
         const pageWidth = doc.internal.pageSize.getWidth();
         const margin = 10;
         
-        const title = "REPORTE DE TAREAS ASISTENTE DIARIO";
+        const title = "REPORTE DE TAREAS ASISTENTE DIARIO PRO";
         doc.setFontSize(16);
         doc.text(title, pageWidth / 2, y, { align: 'center' });
         y += lineHeight * 2;
@@ -476,14 +680,16 @@
         doc.setFont(doc.getFont().fontName, 'normal');
 
         tasks.forEach((t, index) => {
+            const timeWorked = t.elapsedTime ? ` | Tiempo: ${formatTime(t.elapsedTime)}` : '';
             const status = t.done ? '[COMPLETADA]' : '[PENDIENTE]';
             const tag = t.tag ? ` | Etiqueta: ${t.tag}` : '';
-            const date = t.date ? ` | Fecha: ${t.date}` : '';
+            const displayDate = formatDateToDisplay(t.date);
+            const date = t.date ? ` | Fecha: ${displayDate}` : '';
             
             const color = t.done ? [128, 128, 128] : [0, 0, 0]; 
             doc.setTextColor(...color);
 
-            const textLine = `${index + 1}. ${status} ${t.text}${tag}${date}`;
+            const textLine = `${index + 1}. ${status} ${t.text}${tag}${date}${timeWorked}`;
             
             if (y + lineHeight > doc.internal.pageSize.getHeight() - margin) {
                 doc.addPage();
@@ -494,9 +700,10 @@
             y += lineHeight;
         });
 
-        doc.save("Reporte_Tareas_" + new Date().toISOString().slice(0, 10) + ".pdf");
+        doc.save("Reporte_Tareas_PRO_" + new Date().toISOString().slice(0, 10) + ".pdf");
     }
 
+    // ---- DICTADO ----
     let recordingInterval;
     let recordingSeconds = 0;
 
@@ -541,34 +748,229 @@
              document.getElementById('recordingTimer').innerText = "Error al iniciar el dictado. Es posible que ya esté activo.";
         }
     }
+    
+    // ----------------------------------------------------------------------
+    // 📂 FUNCIONES DE RESPALDO Y RESTAURACIÓN (Integradas con Firebase) 📂
+    // ----------------------------------------------------------------------
+    
+    function cleanOldBackups() {
+        if (!auth.currentUser) return;
+
+        const oneMonthAgo = new Date();
+        oneMonthAgo.setDate(oneMonthAgo.getDate() - 30); 
+
+        const initialLength = completedTasksBackup.length;
+        
+        completedTasksBackup = completedTasksBackup.filter(t => {
+            if (!t.deletedDate) return true; // Mantener si no tiene fecha de borrado
+            const deleted = new Date(t.deletedDate);
+            return deleted >= oneMonthAgo; 
+        });
+
+        if (completedTasksBackup.length !== initialLength) {
+            // Guardar en la nube si se hizo una limpieza
+            saveData(); 
+            console.log(`Se eliminaron ${initialLength - completedTasksBackup.length} tareas antiguas del respaldo.`);
+        }
+    }
+    
+    function restoreTask(taskId) {
+        if (!auth.currentUser) return;
+
+        const taskToRestore = completedTasksBackup.find(t => t.id == taskId); // Usar == para comparar número/string
+        
+        if (taskToRestore) {
+            // Quitar la tarea del respaldo
+            completedTasksBackup = completedTasksBackup.filter(t => t.id != taskId);
+            
+            // Agregar a la lista principal como pendiente, SIN campos de Time Tracker viejos
+            tasks.push({ 
+                text: taskToRestore.text, 
+                tag: taskToRestore.tag, 
+                date: taskToRestore.date, 
+                done: false,
+                startTime: null,
+                elapsedTime: 0
+            });
+            saveData();
+            
+            // Refrescar vistas
+            renderTasks();
+            renderCalendar();
+            checkUpcomingTasks();
+            alert(`Tarea restaurada: ${taskToRestore.text}`);
+            
+            // Cerrar y reabrir la ventana de respaldo
+            const backupWindow = window.open("", "TasksBackupWindow");
+            if (backupWindow) {
+                backupWindow.close();
+                openBackupWindow();
+            }
+        }
+    }
+
+    function openBackupWindow() {
+        cleanOldBackups(); 
+        
+        const backupWindow = window.open("", "TasksBackupWindow", "width=600,height=500,scrollbars=yes");
+        
+        if (!backupWindow) {
+            alert("El bloqueo de pop-ups impidió abrir la ventana de respaldo.");
+            return;
+        }
+
+        backupWindow.document.write(`
+            <!DOCTYPE html>
+            <html lang="es">
+            <head>
+                <title>Tareas Completadas Respaldadas</title>
+                <style>
+                    body { font-family: Arial, sans-serif; padding: 20px; }
+                    h1 { color: #333; }
+                    ul { list-style-type: none; padding: 0; }
+                    li { margin: 10px 0; padding: 10px; background: #f0f0f0; border-radius: 5px; display: flex; justify-content: space-between; align-items: center; }
+                    .restore-btn { padding: 5px 10px; border: none; border-radius: 5px; cursor: pointer; background: #4CAF50; color: white; }
+                    .restore-btn:hover { opacity: 0.9; }
+                    .deleted-date { font-size: 0.8em; color: #777; margin-top: 5px; }
+                    .time-tracker-info { font-size: 0.8em; color: #007bff; margin-top: 5px; }
+                </style>
+            </head>
+            <body>
+                <h1>Tareas Completadas Respaldadas (${completedTasksBackup.length})</h1>
+                <p>Las tareas en esta lista tienen una antigüedad menor a 1 mes y se pueden restaurar a la lista principal de pendientes.</p>
+                <ul>
+        `);
+
+        if (completedTasksBackup.length === 0) {
+            backupWindow.document.write('<li>No hay tareas respaldadas actualmente.</li>');
+        } else {
+            completedTasksBackup.forEach(task => {
+                const displayDate = formatDateToDisplay(task.date);
+                const deletedDate = task.deletedDate ? formatDateToDisplay(task.deletedDate) : 'N/A';
+                const timeTrackerInfo = task.elapsedTime ? 
+                    `<div class="time-tracker-info">Tiempo trabajado: ${formatTime(task.elapsedTime)}</div>` : '';
+                
+                // IMPORTANTE: Se usa un ID numérico o de cadena, lo trataremos como string en el JS.
+                backupWindow.document.write(`
+                    <li>
+                        <div>
+                            <strong>${task.text}</strong> (${task.tag || 'Sin etiqueta'}) 
+                            <br/>Fecha original: ${displayDate}
+                            <div class="deleted-date">Borrada: ${deletedDate}</div>
+                            ${timeTrackerInfo}
+                        </div>
+                        <button class="restore-btn" onclick="opener.restoreTask(${task.id})">
+                            Restaurar
+                        </button>
+                    </li>
+                `);
+            });
+        }
+
+        backupWindow.document.write(`
+                </ul>
+                <button onclick="window.close()" class="restore-btn" style="background: #f44336; margin-top: 20px;">Cerrar Ventana</button>
+            </body>
+            </html>
+        `);
+        backupWindow.document.close();
+        backupWindow.focus();
+    }
+
+    // ----------------------------------------------------------------------
+    // 🔔 FUNCIONES PARA ALERTA (Banner) 🔔
+    // ----------------------------------------------------------------------
+
+    function checkUpcomingTasks() {
+        if (!auth.currentUser) return;
+
+        const today = new Date();
+        const todayInternalDateStr = today.toISOString().slice(0, 10);
+        const tomorrowDates = getTomorrowDateStr();
+        
+        const banner = document.getElementById('upcomingTasksBanner');
+        
+        const todayTasks = tasks.filter(t => t.date === todayInternalDateStr && !t.done);
+        const tomorrowTasks = tasks.filter(t => t.date === tomorrowDates.internal && !t.done);
+        
+        const allUpcomingTasks = [...todayTasks, ...tomorrowTasks];
+
+        if (allUpcomingTasks.length > 0) {
+            let title = '';
+            let listContent = '';
+            
+            if (todayTasks.length > 0 && tomorrowTasks.length > 0) {
+                title = `Tienes **${allUpcomingTasks.length} tarea(s)** pendiente(s) entre hoy y mañana.`;
+            } else if (todayTasks.length > 0) {
+                title = `Tienes **${todayTasks.length} tarea(s)** pendiente(s) para **HOY** (${formatDateToDisplay(todayInternalDateStr)}).`;
+            } else if (tomorrowTasks.length > 0) {
+                title = `Tienes **${tomorrowTasks.length} tarea(s)** pendiente(s) para **MAÑANA** (${tomorrowDates.display}).`;
+            }
+            
+            const summaryTasks = [...todayTasks, ...tomorrowTasks].map(t => {
+                const dateLabel = t.date === todayInternalDateStr ? '(HOY)' : '(MAÑANA)';
+                return `- ${t.text} (${t.tag || 'Sin etiqueta'}) ${dateLabel}`;
+            });
+            listContent = summaryTasks.join('\n');
+            
+            banner.innerHTML = `
+                <div>
+                    <strong>🚨 ALERTA:</strong> ${title.replace(/\*\*/g, '<strong>').replace(/\*\*/g, '</strong>')}
+                    <div class="task-list-summary">${listContent}</div>
+                </div>
+                <button onclick="document.getElementById('upcomingTasksBanner').style.display='none'">✖</button>
+            `;
+            banner.style.display = 'flex'; 
+        } else {
+            banner.style.display = 'none'; 
+        }
+    }
+
+
+    // ----------------------------------------------------------------------
+    // 📅 FUNCIONES DEL CALENDARIO (Navegable) 📅
+    // ----------------------------------------------------------------------
+    
+    function changeMonth(offset) {
+        currentCalendarDate.setMonth(currentCalendarDate.getMonth() + offset);
+        renderCalendar(); 
+    }
 
     function renderCalendar() {
+        const targetDate = currentCalendarDate; 
         const calendar = document.getElementById('calendarView');
+        const monthDisplay = document.getElementById('currentMonthDisplay');
+        
         calendar.innerHTML = '';
-        const today = new Date();
-        const year = today.getFullYear();
-        const month = today.getMonth();
+
+        const year = targetDate.getFullYear();
+        const month = targetDate.getMonth();
         const daysInMonth = new Date(year, month + 1, 0).getDate();
         
-        const todayStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+        const monthNames = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
+        monthDisplay.innerText = `${monthNames[month]} ${year}`;
         
+        const today = new Date();
+        const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+        
+        const tomorrowStr = getTomorrowDateStr().internal; 
+
         const dayNames = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes'];
         
-        calendar.style.gridTemplateColumns = 'repeat(5, 1fr)'; 
-
+        calendar.style.gridTemplateColumns = 'repeat(5, 1fr)';
+        
         dayNames.forEach(name => {
             const header = document.createElement('div');
             header.className = 'day-header';
             header.style.fontWeight = 'bold';
             header.style.textAlign = 'center';
-            header.innerText = name; 
+            header.innerText = name;
             calendar.appendChild(header);
         });
 
-        let firstDayOfMonth = new Date(year, month, 1).getDay(); 
-        
+        let firstDayOfMonth = new Date(year, month, 1).getDay();
         if (firstDayOfMonth === 0) firstDayOfMonth = 7; 
-        
+
         if (firstDayOfMonth >= 1 && firstDayOfMonth <= 5) {
             for (let i = 1; i < firstDayOfMonth; i++) {
                 const emptyDay = document.createElement('div');
@@ -579,18 +981,20 @@
             }
         }
         
-
+        // COMBINAR TAREAS ACTIVAS Y RESPALDADAS PARA EL CALENDARIO
+        // Esto permite ver las tareas borradas con fecha en el calendario.
+        const allCalendarTasks = [...tasks, ...completedTasksBackup];
+        
         for (let d = 1; d <= daysInMonth; d++) {
             const dateObj = new Date(year, month, d);
-            const dayOfWeek = dateObj.getDay(); 
-            
-            if (dayOfWeek === 0 || dayOfWeek === 6) { 
-                continue; 
+            let dayOfWeek = dateObj.getDay();
+            if (dayOfWeek === 6 || dayOfWeek === 0) {
+                continue;
             }
 
             const monthStr = String(month + 1).padStart(2, '0');
             const dayStr = String(d).padStart(2, '0');
-            const dateStr = `${year}-${monthStr}-${dayStr}`;
+            const dateStr = `${year}-${monthStr}-${dayStr}`; 
             
             const dayDiv = document.createElement('div');
             dayDiv.className = 'day';
@@ -599,22 +1003,35 @@
                 dayDiv.classList.add('current-day');
             }
 
-            const dayNameIndex = dayOfWeek === 0 ? 6 : dayOfWeek - 1; 
-            const dayNameShort = dayNames[dayNameIndex] ? dayNames[dayNameIndex].substring(0, 3) : '';
+            const dayNameIndex = dayOfWeek - 1; 
+            const dayNameShort = dayNames[dayNameIndex].substring(0, 3);
             dayDiv.innerHTML = `<strong>${dayNameShort} ${d}</strong><br>`;
             
-            tasks.filter(t => t.date === dateStr).forEach(t => {
+            allCalendarTasks.filter(t => t.date === dateStr).forEach(t => {
                 const p = document.createElement('p');
                 p.innerText = t.text;
                 p.style.fontSize = '12px';
-                p.style.color = t.done ? 'gray' : '#333';
-                p.style.textDecoration = t.done ? 'line-through' : 'none';
+                // La tarea se considera 'hecha' si está en la lista principal y 'done: true', o si tiene un 'id' (está en respaldo)
+                const isDone = t.done || t.id !== undefined; 
+                
+                p.style.color = isDone ? 'gray' : '#333';
+                p.style.textDecoration = isDone ? 'line-through' : 'none';
+                
+                if (dateStr === tomorrowStr && !isDone) {
+                    p.innerHTML += ' <span class="tomorrow-task">(Mañana)</span>';
+                }
+                
                 dayDiv.appendChild(p);
             });
             calendar.appendChild(dayDiv);
         }
     }
 
+
+    // ----------------------------------------------------------------------
+    // 🔍 FUNCIONES DE BÚSQUEDA 🔍
+    // ----------------------------------------------------------------------
+    
     function searchItems() {
         const query = document.getElementById('searchInput').value.toLowerCase();
         const results = document.getElementById('searchResults');
@@ -633,7 +1050,10 @@
         if (foundTasks.length > 0) {
             foundTasks.forEach(t => {
                 const li = document.createElement('li');
-                li.innerText = `TAREA: ${t.text} (${t.tag || 'Sin etiqueta'}) - ${t.date || 'Sin fecha'}`;
+                const displayDate = formatDateToDisplay(t.date);
+                const timeInfo = t.elapsedTime ? ` - Tiempo: ${formatTime(t.elapsedTime)}` : '';
+                
+                li.innerText = `TAREA: ${t.text} (${t.tag || 'Sin etiqueta'}) - ${displayDate}${timeInfo}`;
                 li.className = t.done ? 'completed' : '';
                 results.appendChild(li);
             });
@@ -642,76 +1062,6 @@
         }
     }
     
-    // ----------------------------------------------------------------------
-    // 🔔 FUNCIONES PARA LA ALERTA (MODAL) 🔔
-    // ----------------------------------------------------------------------
-
-    function closeAlertModal() {
-        document.getElementById('taskAlertModal').style.display = 'none';
-    }
-
-    function checkForAlerts() {
-        const today = new Date();
-        const todayStr = today.toISOString().slice(0, 10); // YYYY-MM-DD
-        
-        // Calcula la fecha de mañana
-        const tomorrow = new Date(today);
-        tomorrow.setDate(today.getDate() + 1);
-        const tomorrowStr = tomorrow.toISOString().slice(0, 10);
-        
-        // Filtra las tareas pendientes (done: false) con fecha en hoy o mañana
-        const pendingAlerts = tasks.filter(t => 
-            !t.done && (t.date === todayStr || t.date === tomorrowStr)
-        ).sort((a, b) => {
-            // Ordena: Primero las de hoy, luego las de mañana
-            if (a.date === todayStr && b.date === tomorrowStr) return -1;
-            if (a.date === tomorrowStr && b.date === todayStr) return 1;
-            return 0;
-        });
-
-        if (pendingAlerts.length > 0) {
-            const list = document.getElementById('alertTaskList');
-            const header = document.getElementById('alertMessageHeader');
-            list.innerHTML = '';
-            
-            let todayCount = 0;
-            let tomorrowCount = 0;
-
-            pendingAlerts.forEach(task => {
-                const li = document.createElement('li');
-                const dateDisplay = task.date === todayStr ? 'HOY' : 'MAÑANA';
-                
-                if (task.date === todayStr) todayCount++;
-                if (task.date === tomorrowStr) tomorrowCount++;
-
-                let text = `${dateDisplay} (${task.date}): ${task.text}`;
-                if (task.tag === 'Urgente') {
-                    text = `⚠️ ¡URGENTE! ${text}`;
-                }
-                li.innerText = text;
-                list.appendChild(li);
-            });
-
-            // Crea un mensaje de encabezado más informativo
-            let headerText = "Tienes ";
-            if (todayCount > 0) {
-                headerText += `<span style="font-weight: bold; color: #d32f2f;">${todayCount} tarea(s) para HOY</span>`;
-            }
-            if (todayCount > 0 && tomorrowCount > 0) {
-                headerText += " y ";
-            }
-            if (tomorrowCount > 0) {
-                headerText += `<span style="font-weight: bold; color: #1976d2;">${tomorrowCount} tarea(s) para MAÑANA</span>`;
-            }
-            
-            header.innerHTML = headerText;
-
-            // Muestra el modal
-            document.getElementById('taskAlertModal').style.display = 'block';
-        }
-    }
-
-    // ---- MANEJO DEL BUSCADOR ----
     const searchInput = document.getElementById("searchInput");
     const searchResults = document.getElementById("searchResults");
     const clearSearchBtn = document.getElementById("clearSearchBtn");
@@ -720,12 +1070,12 @@
     searchBtn.addEventListener('click', searchItems);
 
     clearSearchBtn.addEventListener("click", () => {
-      searchInput.value = "";
-      searchResults.innerHTML = "";
-      if(auth.currentUser) { 
-        loadTasksFromCloud(); 
-      }
+        searchInput.value = "";
+        searchResults.innerHTML = "";
+        renderTasks();
+        renderCalendar();
     });
+
 </script>
 </body>
 </html>
