@@ -1194,6 +1194,14 @@
         
         calendar.style.gridTemplateColumns = 'repeat(5, 1fr)';
         
+        // ** MODIFICACIÓN PARA RESPONSIVIDAD DEL CALENDARIO **
+        if (window.matchMedia("(max-width: 768px)").matches) {
+            calendar.style.gridTemplateColumns = 'repeat(3, 1fr)';
+        } else {
+            calendar.style.gridTemplateColumns = 'repeat(5, 1fr)';
+        }
+        // ****************************************************
+
         dayNames.forEach(name => {
             const header = document.createElement('div');
             header.className = 'day-header';
@@ -1217,7 +1225,6 @@
         }
         
         // COMBINAR TAREAS ACTIVAS Y RESPALDADAS PARA EL CALENDARIO
-        // Esto permite ver las tareas borradas con fecha en el calendario.
         const allCalendarTasks = [...tasks, ...completedTasksBackup];
         
         for (let d = 1; d <= daysInMonth; d++) {
