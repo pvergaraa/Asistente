@@ -205,7 +205,7 @@
                 </div>
                 
                 <div style="display: flex; gap: 10px; flex-wrap: wrap;">
-                    <button onclick="addTask()">Agregar tarea</button>
+                    <button id="addTaskBtn" onclick="addTask()">Agregar tarea</button>
                     <button onclick="startDictation()">🎙️ Comenzar dictado</button>
                 </div>
             </div>
@@ -283,6 +283,7 @@
     let completedTasksBackup = []; // Tareas de respaldo
     let timerUpdateInterval;
     let currentCalendarDate = new Date(); 
+    let editingTaskId = null; // NUEVA VARIABLE GLOBAL para el modo edición
 
     // Elementos DOM
     const loginSection = document.getElementById('loginSection');
@@ -294,6 +295,22 @@
     // ----------------------------------------------------------------------
     // 💻 FUNCIONES AUXILIARES 💻
     // ----------------------------------------------------------------------
+    
+    // NUEVA FUNCIÓN: Genera un ID único para cada tarea
+    function generateId() {
+        return Date.now().toString(36) + Math.random().toString(36).substring(2);
+    }
+    
+    // NUEVA FUNCIÓN: Muestra un mensaje temporal de éxito
+    function showSuccessBanner(message) {
+        const statusMessage = document.getElementById('statusMessage');
+        statusMessage.style.color = 'green';
+        statusMessage.innerText = message;
+        setTimeout(() => {
+            statusMessage.style.color = 'blue';
+            statusMessage.innerText = "Cargado desde la nube."; 
+        }, 3000);
+    }
 
     function formatDateToDisplay(dateStr) {
         if (!dateStr || dateStr.length !== 10) return 'Sin fecha';
@@ -441,6 +458,9 @@
             statusMessage.innerText = `🚨 Error de conexión/reglas de Firebase: ${e.code || e.message}.`;
         }
         
+        // Asegurar que las tareas antiguas sin ID lo obtengan
+        tasks = tasks.map(t => ({ ...t, id: t.id || generateId() }));
+
         renderTasks();
         renderCalendar();
         checkUpcomingTasks(); 
@@ -450,7 +470,11 @@
     // ⏱️ FUNCIONES DEL TIME TRACKER ⏱️
     // ----------------------------------------------------------------------
 
-    function toggleTimer(originalIndex) {
+    // MODIFICADO: Ahora usa taskId para la estabilidad
+    function toggleTimer(taskId) {
+        const originalIndex = tasks.findIndex(t => t.id === taskId);
+        if (originalIndex === -1) return;
+
         const task = tasks[originalIndex];
         const now = Date.now();
 
@@ -487,9 +511,51 @@
 
 
     // ----------------------------------------------------------------------
-    // ---- LÓGICA DE LA APLICACIÓN ----
+    // ✏️ FUNCIONES DE EDICIÓN Y GESTIÓN DE TAREAS ✏️
     // ----------------------------------------------------------------------
+    
+    // NUEVA FUNCIÓN: Restablece el formulario y el modo de edición
+    function resetTaskForm() {
+        const taskInput = document.getElementById('taskInput');
+        const taskTag = document.getElementById('taskTag');
+        const addTaskBtn = document.getElementById('addTaskBtn');
+        
+        taskInput.value = '';
+        taskTag.value = ''; // Limpiar etiqueta
+        initializeDateInput(); // Restablecer fecha a la de hoy
+        
+        editingTaskId = null;
+        addTaskBtn.textContent = 'Agregar tarea';
+    }
 
+    // NUEVA FUNCIÓN: Carga la tarea seleccionada en el formulario
+    function editTask(taskId) {
+        const taskInput = document.getElementById('taskInput');
+        const taskTag = document.getElementById('taskTag');
+        const taskDate = document.getElementById('taskDate');
+        const addTaskBtn = document.getElementById('addTaskBtn');
+
+        const taskToEdit = tasks.find(t => t.id === taskId);
+
+        if (!taskToEdit) {
+            console.error("No se encontró la tarea con ID:", taskId);
+            return;
+        }
+
+        // 1. Cargar los datos
+        taskInput.value = taskToEdit.text;
+        taskTag.value = taskToEdit.tag || '';
+        taskDate.value = taskToEdit.date;
+        
+        // 2. Preparar el sistema para la edición
+        editingTaskId = taskId;
+        addTaskBtn.textContent = 'Guardar Cambios';
+
+        // 3. Mover la vista a la parte superior
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    // MODIFICADO: Maneja la adición y la edición
     function addTask(text = null) {
         const taskInput = document.getElementById('taskInput');
         const taskDateInput = document.getElementById('taskDate'); 
@@ -499,22 +565,38 @@
         const date = taskDateInput.value; 
         
         if (taskText.trim()) {
-            tasks.push({ 
-                text: taskText.trim(), 
-                tag, 
-                date, 
-                done: false,
-                startTime: null,      
-                elapsedTime: 0        
-            });
+            
+            if (editingTaskId) {
+                // 1. MODO EDICIÓN (Actualizar tarea existente)
+                const taskIndex = tasks.findIndex(t => t.id === editingTaskId);
+                if (taskIndex !== -1) {
+                    tasks[taskIndex].text = taskText.trim();
+                    tasks[taskIndex].tag = tag;
+                    tasks[taskIndex].date = date; 
+                    showSuccessBanner('Tarea actualizada exitosamente.');
+                }
+            } else {
+                // 2. MODO CREACIÓN (Crear nueva tarea)
+                tasks.push({ 
+                    id: generateId(), // **Añadido ID**
+                    text: taskText.trim(), 
+                    tag, 
+                    date, 
+                    done: false,
+                    startTime: null,      
+                    elapsedTime: 0        
+                });
+                showSuccessBanner('Tarea añadida exitosamente.');
+            }
+            
             saveData();
             
             if (!text) { 
                  taskInput.value = '';
             }
             
-            // Restablece el campo de fecha a la fecha actual después de agregar la tarea
-            taskDateInput.value = getTodayDateStrForInput(); 
+            // Restablece el formulario y el modo de edición
+            resetTaskForm(); 
             
             renderTasks();
             renderCalendar();
@@ -522,7 +604,11 @@
         }
     }
 
-    function toggleTask(index) {
+    // MODIFICADO: Ahora usa taskId para la estabilidad
+    function toggleTask(taskId) {
+        const index = tasks.findIndex(t => t.id === taskId);
+        if (index === -1) return;
+
         tasks[index].done = !tasks[index].done;
 
         // Si se completa, detener el cronómetro y acumular tiempo
@@ -543,6 +629,22 @@
         renderCalendar();
         checkUpcomingTasks();
     }
+    
+    // NUEVA FUNCIÓN: Eliminar una tarea individual por ID
+    function deleteTask(taskId) {
+        if (!auth.currentUser) return;
+
+        // Filtrar tareas que NO coinciden con el ID
+        tasks = tasks.filter(t => t.id !== taskId);
+        
+        saveData(); 
+        
+        renderTasks();
+        renderCalendar(); 
+        checkUpcomingTasks(); 
+        showSuccessBanner('Tarea eliminada.');
+    }
+
 
     // MODIFICADO: Mover tareas completadas a la lista de respaldo antes de eliminarlas
     function deleteCompletedTasks() {
@@ -552,7 +654,7 @@
             .filter(t => t.done)
             .map(t => ({
                 ...t,
-                id: Date.now() + Math.random(), // ID único
+                id: t.id || Date.now() + Math.random(), // Usar ID existente o generar uno
                 deletedDate: new Date().toISOString().slice(0, 10) // Fecha de borrado
             }));
 
@@ -585,20 +687,20 @@
         
         const totalTasks = tasks.length;
 
-        // 1. Asignar índice original para ordenamiento estable
-        const allTasksWithIndices = tasks.map((t, index) => ({...t, originalIndex: index}));
-
+        // 1. Asignar ID (ya se hace en loadDataFromCloud o addTask)
         // 2. Separar y ordenar (Pendientes: más nueva arriba / Completadas: más nueva arriba, al final)
-        let pendingTasksWithIndex = allTasksWithIndices.filter(t => !t.done);
-        let completedTasksWithIndex = allTasksWithIndices.filter(t => t.done);
+        let pendingTasks = tasks.filter(t => !t.done);
+        let completedTasks = tasks.filter(t => t.done);
         
-        pendingTasksWithIndex.sort((a, b) => b.originalIndex - a.originalIndex); // Más nueva (índice alto) primero
-        completedTasksWithIndex.sort((a, b) => b.originalIndex - a.originalIndex);
+        // Asumiendo que el índice en el array ya refleja el orden de creación (o se añade un createdAt)
+        // Por ahora, ordenamos por índice del array original (que mantiene el orden de creación/adición).
+        pendingTasks.sort((a, b) => b.id.localeCompare(a.id)); 
+        completedTasks.sort((a, b) => b.id.localeCompare(a.id)); 
         
-        const sortedTasks = [...pendingTasksWithIndex, ...completedTasksWithIndex];
+        const sortedTasks = [...pendingTasks, ...completedTasks];
         
         sortedTasks.forEach((task, i) => {
-            const originalIndex = task.originalIndex; 
+            const taskId = task.id; // USAR ID para todas las acciones
             const taskNumber = i + 1; 
 
             const li = document.createElement('li');
@@ -623,14 +725,18 @@
             let timerButtonHTML = '';
             let timerDisplay = '';
             
+            // Botones de acción (Editar, Cronómetro, Eliminar)
+            let actionButtonsHTML = '';
+            
             if (!task.done) {
+                // Lógica de cronómetro
                 if (task.startTime !== null) {
                     currentElapsedTime += (Date.now() - task.startTime);
                     
                     timerButtonHTML = `
                         <button 
                             style="background: #d32f2f; margin: 0; padding: 5px 10px; font-weight: bold;" 
-                            onclick="event.stopPropagation(); toggleTimer(${originalIndex})">
+                            onclick="event.stopPropagation(); toggleTimer('${taskId}')">
                             ⏹️ Detener
                         </button>
                     `;
@@ -638,25 +744,44 @@
                     timerButtonHTML = `
                         <button 
                             style="background: #388e3c; margin: 0; padding: 5px 10px;" 
-                            onclick="event.stopPropagation(); toggleTimer(${originalIndex})">
+                            onclick="event.stopPropagation(); toggleTimer('${taskId}')">
                             ▶️ Iniciar
                         </button>
                     `;
                 }
                 timerDisplay = ` | Tiempo: <strong>${formatTime(currentElapsedTime)}</strong>`;
+
+                // Botones de edición/eliminación para tareas pendientes
+                actionButtonsHTML = `
+                    ${timerButtonHTML}
+                    <button onclick="editTask('${taskId}')" style="background: #ffc107; color: #333; margin: 0; padding: 5px 10px;">
+                        Editar
+                    </button>
+                    <button onclick="deleteTask('${taskId}')" style="background: #f44336; margin: 0; padding: 5px 10px;">
+                        🗑️
+                    </button>
+                `;
+
             } else {
                  timerDisplay = ` | Tiempo Total: <strong>${formatTime(currentElapsedTime)}</strong>`;
-                 timerButtonHTML = ``; 
+                 // Botón de eliminación directa para completadas (opcional, si no se usan los botones de Completo/Borrar)
+                 actionButtonsHTML = `
+                    <button onclick="deleteTask('${taskId}')" style="background: #f44336; margin: 0; padding: 5px 10px;">
+                        🗑️
+                    </button>
+                 `;
             }
             
-            // Estructura del LI (Tarea + Botón de Cronómetro + Display de Tiempo)
+            // Estructura del LI (Tarea + Botones de Acción)
             li.innerHTML = `
                 <div style="display: flex; justify-content: space-between; align-items: center;">
-                    <span onclick="toggleTask(${originalIndex})" style="flex-grow: 1;">
+                    <span onclick="toggleTask('${taskId}')" style="flex-grow: 1;">
                         ${taskNumber}. ${task.text} (${styledTag}) - ${displayDate}
                         ${timerDisplay}
                     </span>
-                    ${timerButtonHTML}
+                    <div style="display: flex; gap: 5px;">
+                        ${actionButtonsHTML}
+                    </div>
                 </div>
             `;
             
@@ -796,6 +921,7 @@
             
             // Agregar a la lista principal como pendiente, SIN campos de Time Tracker viejos
             tasks.push({ 
+                id: generateId(), // **NUEVO ID para la nueva instancia**
                 text: taskToRestore.text, 
                 tag: taskToRestore.tag, 
                 date: taskToRestore.date, 
@@ -870,7 +996,7 @@
                             <div class="deleted-date">Borrada: ${deletedDate}</div>
                             ${timeTrackerInfo}
                         </div>
-                        <button class="restore-btn" onclick="opener.restoreTask(${task.id})">
+                        <button class="restore-btn" onclick="opener.restoreTask('${task.id}')">
                             Restaurar
                         </button>
                     </li>
