@@ -194,7 +194,7 @@
                     <option value="Importante">Importante</option>
                     <option value="Pendiente">Pendiente</option>
                 </select>
-                <input id="taskDate" type="date"/>
+                <input id="taskDate" type="date"/> 
             </div>
             
             <div class="task-buttons">
@@ -302,6 +302,15 @@
             return `${parts[2]}-${parts[1]}-${parts[0]}`; // DD-MM-YYYY
         }
         return dateStr;
+    }
+
+    // NUEVA FUNCIÓN: Obtiene la fecha de hoy en formato YYYY-MM-DD para el input[type="date"]
+    function getTodayDateStrForInput() {
+        const today = new Date();
+        const year = today.getFullYear();
+        const month = String(today.getMonth() + 1).padStart(2, '0');
+        const day = String(today.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
     }
 
     function formatTime(ms) {
@@ -503,7 +512,9 @@
             if (!text) { 
                  taskInput.value = '';
             }
-            taskDateInput.value = '';
+            
+            // Restablece el campo de fecha a la fecha actual después de agregar la tarea
+            taskDateInput.value = getTodayDateStrForInput(); 
             
             renderTasks();
             renderCalendar();
@@ -1075,6 +1086,24 @@
         renderTasks();
         renderCalendar();
     });
+
+    // ----------------------------------------------------------------------
+    // ⚙️ INICIALIZACIÓN DEL DOM ⚙️
+    // ----------------------------------------------------------------------
+
+    function initializeDateInput() {
+        const todayStr = getTodayDateStrForInput();
+        const taskDateInput = document.getElementById('taskDate');
+        
+        // 1. Establece el valor por defecto a la fecha actual
+        taskDateInput.value = todayStr;
+        
+        // 2. Establece la fecha mínima seleccionable a la fecha actual
+        taskDateInput.min = todayStr;
+    }
+
+    // Asegura que el input de fecha esté configurado al cargar el script
+    initializeDateInput();
 
 </script>
 </body>
