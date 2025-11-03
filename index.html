@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
 <meta charset="utf-8"/>
-<title>Asistente Diario PRO - Con Time Tracker y Firebase</title>
+<title>Asistente Diario PRO - Tareas Sincronizadas y Time Tracker</title>
 <style>
     /* Diseño Centrado */
     body { 
@@ -56,26 +56,10 @@
         padding: 5px; 
         background: #eaeaea; 
         border-radius: 5px; 
-        cursor: default; /* El click se maneja en el contenido interno */
+        cursor: pointer; 
         white-space: normal; 
     }
     .completed { text-decoration: line-through; color: gray; }
-    
-    /* MODIFICACIÓN: Contenido de la tarea flexible para el Time Tracker */
-    li > div {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        width: 100%;
-    }
-
-    /* Estilo para el texto de la tarea (para el toggle) */
-    li > div > span {
-        flex-grow: 1;
-        cursor: pointer; /* Indica que se puede hacer click para completar */
-        padding-right: 10px;
-    }
-
     .calendar { display: grid; grid-template-columns: repeat(5, 1fr); gap: 5px; } 
     .day { background: #ddd; padding: 10px; border-radius: 5px; min-height: 60px; }
     
@@ -105,7 +89,7 @@
 
     /* ESTILOS PARA EL POPUP DE ALERTA (MODAL) */
     .alert-modal {
-        display: none; 
+        display: none; /* Oculto por defecto */
         position: fixed;
         z-index: 1000;
         left: 0;
@@ -195,7 +179,7 @@
 
 
     <div class="section">
-        <h2>✅ Tareas y Time Tracker</h2>
+        <h2>✅ Tareas</h2>
         <input id="taskInput" placeholder="Escribe una tarea..." type="text"/>
         <select id="taskTag">
             <option value="">Etiqueta</option>
@@ -299,9 +283,6 @@
     const db = app.firestore(); 
     const auth = app.auth(); 
 
-    // Variable para manejar el intervalo del timer en tiempo real
-    let timerInterval = null; 
-
     // ----------------------------------------------------------------------
     // 🔒 FUNCIONES DE AUTENTICACIÓN Y CONTROL DE VISTA 🔒
     // ----------------------------------------------------------------------
@@ -336,19 +317,20 @@
             mainContent.style.display = 'block';
             authMessage.innerText = '';
             loadTasksFromCloud(); 
-            // INICIAR EL CRONÓMETRO EN TIEMPO REAL
-            if (timerInterval) clearInterval(timerInterval);
-            timerInterval = setInterval(updateRunningTimers, 1000); 
+            startTimerInterval(); // 👈 INICIAR INTERVALO DE TIME TRACKER
         } else {
             // USUARIO DESLOGUEADO
             loginSection.style.display = 'block'; 
             mainContent.style.display = 'none';
             tasks = [];
+            
+            // 👈 DETENER INTERVALO DE TIME TRACKER
+            if (timerUpdateInterval) { 
+                clearInterval(timerUpdateInterval); 
+            }
+
             renderTasks();
             renderCalendar();
-            // DETENER EL CRONÓMETRO
-            if (timerInterval) clearInterval(timerInterval);
-            timerInterval = null;
         }
     });
 
@@ -387,11 +369,6 @@
 
             if (docSnap.exists) {
                 tasks = docSnap.data().tasks || []; 
-                // Asegurar que las tareas antiguas tengan los campos de tiempo
-                tasks.forEach(t => {
-                    if (t.startTime === undefined) t.startTime = null;
-                    if (t.elapsedTime === undefined) t.elapsedTime = 0;
-                });
                 statusMessage.innerText = "Cargado desde la nube.";
             } else {
                 tasks = []; 
@@ -413,63 +390,63 @@
     }
     
     // ----------------------------------------------------------------------
-    // ⏱️ FUNCIONES DEL TIME TRACKER PRO ⏱️
+    // ⏱️ FUNCIONES DEL TIME TRACKER ⏱️
     // ----------------------------------------------------------------------
 
-    // Función de utilidad para convertir milisegundos a HH:MM:SS
+    // Variable global para manejar la actualización de la interfaz
+    let timerUpdateInterval;
+
+    // Función para convertir milisegundos a formato HH:MM:SS
     function formatTime(ms) {
-        const seconds = Math.floor(ms / 1000);
-        const h = String(Math.floor(seconds / 3600)).padStart(2, '0');
-        const m = String(Math.floor((seconds % 3600) / 60)).padStart(2, '0');
-        const s = String(seconds % 60).padStart(2, '0');
-        return `${h}:${m}:${s}`;
+        if (ms === 0) return "00:00:00";
+        const totalSeconds = Math.floor(ms / 1000);
+        const hours = String(Math.floor(totalSeconds / 3600)).padStart(2, '0');
+        const minutes = String(Math.floor((totalSeconds % 3600) / 60)).padStart(2, '0');
+        const seconds = String(totalSeconds % 60).padStart(2, '0');
+        return `${hours}:${minutes}:${seconds}`;
     }
 
-    // Actualiza los contadores de las tareas que están en marcha
-    function updateRunningTimers() {
-        tasks.forEach((task, index) => {
-            if (task.startTime && !task.done) {
-                const now = Date.now();
-                const runningTime = task.elapsedTime + (now - task.startTime);
-                const timerElement = document.getElementById(`timer-${index}`);
-                if (timerElement) {
-                    timerElement.innerText = formatTime(runningTime);
-                }
-            }
-        });
-    }
-
-    // Función principal para iniciar/detener el cronómetro de una tarea
+    // FUNCIÓN CLAVE: Iniciar o detener el Time Tracker
     function toggleTimer(originalIndex) {
         const task = tasks[originalIndex];
+        const now = Date.now();
 
-        if (task.done) {
-            alert("No puedes iniciar el cronómetro en una tarea completada.");
-            return;
+        // Si la tarea es muy antigua y no tiene los campos de timer, inicializarlos
+        if (typeof task.elapsedTime === 'undefined') {
+             task.elapsedTime = 0;
+             task.startTime = null;
         }
 
-        // Si ya hay un cronómetro corriendo, detenlo.
-        if (task.startTime) {
-            // DETENER: Calcular y acumular
-            const duration = Date.now() - task.startTime;
-            task.elapsedTime += duration;
-            task.startTime = null; // Detener el cronómetro
+        if (task.startTime === null) {
+            // INICIAR: Guardar el tiempo actual
+            task.startTime = now;
+            console.log(`Iniciado el timer para: ${task.text}`);
         } else {
-            // INICIAR: Marcar el tiempo de inicio
-            // Opcional: Detener cualquier otro timer que esté corriendo
-            tasks.forEach((t, i) => {
-                if (i !== originalIndex && t.startTime) {
-                    const duration = Date.now() - t.startTime;
-                    t.elapsedTime += duration;
-                    t.startTime = null;
-                }
-            });
-            task.startTime = Date.now();
+            // DETENER: Calcular y acumular el tiempo transcurrido
+            const duration = now - task.startTime;
+            task.elapsedTime += duration;
+            task.startTime = null; // Reiniciar el contador de inicio
+            console.log(`Detenido. Acumulado: ${formatTime(task.elapsedTime)}`);
         }
 
         saveData();
-        renderTasks(); // Renderizar para cambiar el icono del botón
+        renderTasks(); // Forzar el re-renderizado para actualizar el botón y display
     }
+
+    // Inicializa el intervalo para actualizar los cronómetros cada segundo
+    function startTimerInterval() {
+        // Si ya existe un intervalo, lo limpiamos para evitar duplicados
+        if (timerUpdateInterval) {
+            clearInterval(timerUpdateInterval);
+        }
+        
+        // Solo actualiza si hay un usuario logueado
+        if (auth.currentUser) {
+            // Se llama a renderTasks cada segundo para actualizar los contadores en curso
+            timerUpdateInterval = setInterval(renderTasks, 1000); 
+        }
+    }
+
 
     // ----------------------------------------------------------------------
     // ---- RESTO DE FUNCIONES (Lógica de la app) ----
@@ -489,9 +466,9 @@
                 tag, 
                 date, 
                 done: false,
-                // NUEVOS CAMPOS PARA EL CRONÓMETRO
-                startTime: null, 
-                elapsedTime: 0 
+                // 🚨 CAMPOS DE TIME TRACKER 🚨
+                startTime: null,      // Marca de tiempo de inicio (null si está detenido)
+                elapsedTime: 0        // Tiempo total acumulado en milisegundos
             });
             saveData();
             
@@ -506,14 +483,18 @@
     }
 
     function toggleTask(index) {
-        // Al marcar/desmarcar, asegurarse de que el cronómetro se detenga.
-        if (tasks[index].startTime) {
-            const duration = Date.now() - tasks[index].startTime;
+        tasks[index].done = !tasks[index].done;
+
+        // Si la tarea se completa, detener el cronómetro si estaba corriendo
+        if (tasks[index].done && tasks[index].startTime !== null) {
+            // Usa la lógica de toggleTimer para detener y acumular
+            const now = Date.now();
+            const duration = now - tasks[index].startTime;
             tasks[index].elapsedTime += duration;
             tasks[index].startTime = null;
+            console.log(`Tarea completada. Timer detenido. Acumulado final: ${formatTime(tasks[index].elapsedTime)}`);
         }
-        
-        tasks[index].done = !tasks[index].done;
+
         saveData();
         renderTasks();
         renderCalendar();
@@ -531,15 +512,21 @@
         list.innerHTML = '';
         
         const totalTasks = tasks.length;
-        const reversedTasks = [...tasks].reverse(); 
-
-        reversedTasks.forEach((task, i) => {
-            const originalIndex = totalTasks - 1 - i; 
+        // Ordenar las tareas pendientes al inicio (la más nueva arriba)
+        const allTasksWithIndices = tasks.map((t, index) => ({...t, originalIndex: index}));
+        let pendingTasksWithIndex = allTasksWithIndices.filter(t => !t.done);
+        let completedTasksWithIndex = allTasksWithIndices.filter(t => t.done);
+        
+        pendingTasksWithIndex.sort((a, b) => b.originalIndex - a.originalIndex);
+        
+        const sortedTasks = [...pendingTasksWithIndex, ...completedTasksWithIndex];
+        
+        sortedTasks.forEach((task, i) => {
+            const originalIndex = task.originalIndex; 
             const taskNumber = i + 1; 
 
             const li = document.createElement('li');
             li.className = task.done ? 'completed' : '';
-            // El li ya no tiene onclick para no interferir con el botón
             
             const tagText = task.tag || 'Sin etiqueta';
             let styledTag = tagText;
@@ -548,73 +535,59 @@
                 styledTag = `<span class="urgent-tag">${tagText}</span>`;
             }
 
-            // CREAR EL CONTENEDOR FLEXIBLE
-            const container = document.createElement('div');
-            container.style.display = 'flex';
-            container.style.justifyContent = 'space-between';
-            container.style.alignItems = 'center';
-            container.style.width = '100%';
-            
-            // Texto y Metadata de la Tarea (con onclick para toggle)
-            const textContent = document.createElement('span');
-            textContent.innerHTML = `${taskNumber}. ${task.text} (${styledTag}) - ${task.date || 'Sin fecha'}`;
-            // Permitir que el usuario haga click en el texto para completar/descompletar
-            textContent.onclick = () => toggleTask(originalIndex); 
-            
-            // Contenedor del Botón y Tiempo
-            const timerContainer = document.createElement('div');
-            timerContainer.style.display = 'flex';
-            timerContainer.style.gap = '10px';
-            timerContainer.style.alignItems = 'center';
+            // ----------------------------------------------------
+            // ⏱️ LÓGICA DE TIEMPO Y BOTÓN
+            // ----------------------------------------------------
+            // Inicializar si no existen (para tareas antiguas)
+            if (typeof task.elapsedTime === 'undefined') task.elapsedTime = 0;
+            if (typeof task.startTime === 'undefined') task.startTime = null;
 
-            // 1. Mostrar el tiempo acumulado
-            const timeDisplay = document.createElement('span');
-            // ID único para actualizar el tiempo en tiempo real
-            timeDisplay.id = `timer-${originalIndex}`; 
+            let currentElapsedTime = task.elapsedTime; 
+            let timerButtonHTML = '';
+            let timerDisplay = '';
             
-            // Usar el tiempo acumulado o el tiempo actual si está corriendo
-            let displayTimeMs = task.elapsedTime || 0;
-            if (task.startTime && !task.done) {
-                displayTimeMs += Date.now() - task.startTime;
-            }
-            timeDisplay.innerText = formatTime(displayTimeMs);
-            timeDisplay.style.fontWeight = 'bold';
-            timeDisplay.style.minWidth = '75px'; // Evita que se mueva el layout al actualizar
-            
-            // 2. Botón INICIAR/DETENER
-            const timerButton = document.createElement('button');
-            timerButton.style.padding = '5px 10px';
-            timerButton.style.margin = '0';
-            timerButton.style.fontWeight = 'bold';
-            
-            if (task.startTime) {
-                // Estado: CORRIENDO (Botón Detener)
-                timerButton.innerText = '⏹️ Detener';
-                timerButton.style.backgroundColor = '#d32f2f'; // Rojo
-            } else {
-                // Estado: DETENIDO (Botón Iniciar)
-                timerButton.innerText = '▶️ Iniciar';
-                timerButton.style.backgroundColor = '#388e3c'; // Verde oscuro
-                if (task.done) {
-                    timerButton.disabled = true; // Deshabilitar si está completada
-                    timerButton.style.opacity = 0.5;
+            if (!task.done) {
+                if (task.startTime !== null) {
+                    // Si el cronómetro está corriendo, calcula el tiempo real
+                    currentElapsedTime += (Date.now() - task.startTime);
+                    
+                    timerButtonHTML = `
+                        <button 
+                            style="background: #d32f2f; margin: 0; padding: 5px 10px; font-weight: bold;" 
+                            onclick="event.stopPropagation(); toggleTimer(${originalIndex})">
+                            ⏹️ Detener
+                        </button>
+                    `;
+                } else {
+                    timerButtonHTML = `
+                        <button 
+                            style="background: #388e3c; margin: 0; padding: 5px 10px;" 
+                            onclick="event.stopPropagation(); toggleTimer(${originalIndex})">
+                            ▶️ Iniciar
+                        </button>
+                    `;
                 }
+                // Mostrar el tiempo acumulado
+                timerDisplay = ` | Tiempo: <strong>${formatTime(currentElapsedTime)}</strong>`;
+            } else {
+                 // Si la tarea está completada, solo muestra el tiempo final
+                 timerDisplay = ` | Tiempo Total: <strong>${formatTime(currentElapsedTime)}</strong>`;
+                 timerButtonHTML = ``; // No hay botón de cronómetro en tareas completadas
             }
-            // Importante: Detener la propagación del click para que no active el toggleTask del texto
-            timerButton.onclick = (e) => {
-                e.stopPropagation(); 
-                toggleTimer(originalIndex);
-            };
-
-            timerContainer.appendChild(timeDisplay);
-            timerContainer.appendChild(timerButton);
             
-            // Montar LI
-            container.appendChild(textContent);
-            container.appendChild(timerContainer);
-            
-            li.appendChild(container);
+            // ----------------------------------------------------
 
+            // Estructura del LI (Tarea + Botón de Cronómetro + Display de Tiempo)
+            li.innerHTML = `
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <span onclick="toggleTask(${originalIndex})" style="flex-grow: 1;">
+                        ${taskNumber}. ${task.text} (${styledTag}) - ${task.date || 'Sin fecha'}
+                        ${timerDisplay}
+                    </span>
+                    ${timerButtonHTML}
+                </div>
+            `;
+            
             list.appendChild(li);
         });
         
@@ -645,15 +618,17 @@
         doc.setFont(doc.getFont().fontName, 'normal');
 
         tasks.forEach((t, index) => {
+            // Incluir el tiempo total trabajado en el reporte
+            const timeWorked = t.elapsedTime ? ` | Tiempo: ${formatTime(t.elapsedTime)}` : '';
+            
             const status = t.done ? '[COMPLETADA]' : '[PENDIENTE]';
             const tag = t.tag ? ` | Etiqueta: ${t.tag}` : '';
             const date = t.date ? ` | Fecha: ${t.date}` : '';
-            const time = t.elapsedTime ? ` | Tiempo: ${formatTime(t.elapsedTime)}` : ''; // Incluye el tiempo
             
             const color = t.done ? [128, 128, 128] : [0, 0, 0]; 
             doc.setTextColor(...color);
 
-            const textLine = `${index + 1}. ${status} ${t.text}${tag}${date}${time}`;
+            const textLine = `${index + 1}. ${status} ${t.text}${tag}${date}${timeWorked}`;
             
             if (y + lineHeight > doc.internal.pageSize.getHeight() - margin) {
                 doc.addPage();
@@ -803,8 +778,10 @@
         if (foundTasks.length > 0) {
             foundTasks.forEach(t => {
                 const li = document.createElement('li');
-                const time = t.elapsedTime ? ` | Tiempo: ${formatTime(t.elapsedTime)}` : '';
-                li.innerText = `TAREA: ${t.text} (${t.tag || 'Sin etiqueta'}) - ${t.date || 'Sin fecha'}${time}`;
+                // Incluir el tiempo acumulado en el resultado de búsqueda
+                const timeInfo = t.elapsedTime ? ` - Tiempo: ${formatTime(t.elapsedTime)}` : '';
+                
+                li.innerText = `TAREA: ${t.text} (${t.tag || 'Sin etiqueta'}) - ${t.date || 'Sin fecha'}${timeInfo}`;
                 li.className = t.done ? 'completed' : '';
                 results.appendChild(li);
             });
