@@ -890,7 +890,7 @@
 
         saveData();
         renderTasks();
-        renderCalendar();
+        renderCalendar(); // <-- Asegura que el calendario se actualice
         checkUpcomingTasks();
     }
     
@@ -1361,6 +1361,9 @@
         renderCalendar(); 
     }
 
+    // ************************************************************
+    // *** FUNCIÓN RENDER CALENDAR CORREGIDA ***
+    // ************************************************************
     function renderCalendar() {
         const targetDate = currentCalendarDate; 
         const calendar = document.getElementById('calendarView');
@@ -1382,13 +1385,12 @@
 
         const dayNames = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes'];
         
-        // ** MODIFICACIÓN PARA RESPONSIVIDAD DEL CALENDARIO **
+        // MODIFICACIÓN PARA RESPONSIVIDAD DEL CALENDARIO
         if (window.matchMedia("(max-width: 768px)").matches) {
             calendar.style.gridTemplateColumns = 'repeat(3, 1fr)';
         } else {
             calendar.style.gridTemplateColumns = 'repeat(5, 1fr)';
         }
-        // ****************************************************
         
         dayNames.forEach(name => {
             const header = document.createElement('div');
@@ -1412,7 +1414,7 @@
             }
         }
         
-        // COMBINAR TAREAS ACTIVAS Y RESPALDADAS PARA EL CALENDARIO
+        // COMBINAR TAREAS ACTIVAS Y RESPALDADAS
         const allCalendarTasks = [...tasks, ...completedTasksBackup];
         
         for (let d = 1; d <= daysInMonth; d++) {
@@ -1441,8 +1443,15 @@
                 const p = document.createElement('p');
                 p.innerText = t.text;
                 p.style.fontSize = '12px';
-                // La tarea se considera 'hecha' si está en la lista principal y 'done: true', o si tiene un 'id' (está en respaldo)
-                const isDone = t.done || t.id !== undefined; 
+                
+                // LÓGICA DE CORRECCIÓN:
+                // 1. Verificar si la tarea está en la lista de respaldo (si no está en 'tasks', asumimos que es del backup).
+                const isBackupTask = !tasks.some(task => task.id === t.id) && completedTasksBackup.some(task => task.id === t.id);
+                
+                // 2. La tarea se considera 'hecha' si:
+                //    a) Está en la lista principal y tiene 'done: true'. (El caso de que se revierte a pendiente: t.done es false)
+                //    b) Es una tarea de respaldo (isBackupTask es true).
+                const isDone = t.done || isBackupTask; 
                 
                 p.style.color = isDone ? 'gray' : '#333';
                 p.style.textDecoration = isDone ? 'line-through' : 'none';
@@ -1456,6 +1465,7 @@
             calendar.appendChild(dayDiv);
         }
     }
+    // ************************************************************
 
 
     // ----------------------------------------------------------------------
