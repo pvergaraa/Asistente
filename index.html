@@ -15,7 +15,7 @@
     
     h1 { color: #333; }
     .section { margin-bottom: 30px; background: #fff; padding: 20px; border-radius: 8px; }
-    input, textarea, select { margin: 5px 0; padding: 8px; width: 100%; }
+    input, textarea, select { margin: 5px 0; padding: 8px; width: 100%; border: 1px solid #ccc; border-radius: 4px; }
     
     /* === ESTILOS PARA EL ENCABEZADO Y BOTÓN SALIR === */
     .header-container {
@@ -63,13 +63,18 @@
 
     li { 
         margin: 5px 0; 
-        padding: 5px; 
+        padding: 10px; /* Aumentado padding para mejor toque en móvil */
         background: #eaeaea; 
         border-radius: 5px; 
         cursor: pointer; 
         white-space: normal;
+        transition: background-color 0.3s, box-shadow 0.3s;
     }
-    .completed { text-decoration: line-through; color: gray; }
+    .completed { 
+        text-decoration: line-through; 
+        color: gray; 
+        background: #f1f1f1; 
+    }
     .calendar { display: grid; grid-template-columns: repeat(5, 1fr); gap: 5px; } 
     .day { background: #ddd; padding: 10px; border-radius: 5px; min-height: 60px; }
     
@@ -94,7 +99,7 @@
         font-weight: bold;
     }
 
-    /* ESTILOS NUEVOS: Etiqueta y Fecha lado a lado*/
+    /* Estilos para Etiqueta y Fecha lado a lado*/
     .task-inputs-row {
         display: flex; 
         gap: 10px;    
@@ -107,7 +112,7 @@
         margin: 0;  
     }
 
-    /* ESTILOS DEL NUEVO BANNER DE ALERTA */
+    /* ESTILOS DEL BANNER DE ALERTA */
     .alert-banner {
         padding: 15px;
         margin-bottom: 20px;
@@ -143,10 +148,96 @@
         font-weight: normal; 
     }
 
-    /* Estilo para las tareas de mañana en el calendario */
     .tomorrow-task {
         font-weight: bold;
         color: orange;
+    }
+
+    /* === NUEVOS ESTILOS PARA EL TIME TRACKING ACTIVO (1.2) === */
+    @keyframes pulse-active {
+        0% { box-shadow: 0 0 5px rgba(56, 142, 60, 0.4); }
+        50% { box-shadow: 0 0 10px rgba(56, 142, 60, 0.8); }
+        100% { box-shadow: 0 0 5px rgba(56, 142, 60, 0.4); }
+    }
+    .task-running {
+        background-color: #e8f5e9 !important; /* Verde muy claro */
+        border: 2px solid #388e3c; /* Borde verde oscuro */
+        animation: pulse-active 2s infinite;
+    }
+    /* ======================================================= */
+
+    /* === MEDIA QUERIES PARA RESPONSIVIDAD (Paso 2) === */
+    @media (max-width: 768px) {
+        body {
+            padding: 0 10px; /* Reduce padding lateral */
+        }
+        
+        /* 1. LAYOUT PRINCIPAL */
+        .header-container {
+            flex-direction: column; /* Apila el título y el botón Salir */
+            align-items: flex-start;
+        }
+        .header-container h1 {
+            font-size: 1.5em;
+        }
+
+        /* 2. TAREAS Y CONTROLES */
+        .task-inputs-row {
+            flex-direction: column; /* Apila Etiqueta y Fecha */
+            gap: 0;
+        }
+        .task-inputs-row select,
+        .task-inputs-row input[type="date"] {
+            width: 100%; /* Ocupan todo el ancho */
+            margin-bottom: 5px;
+        }
+
+        /* 3. BOTONES DE ACCIÓN */
+        .task-buttons {
+            flex-direction: column; /* Apila los grupos de botones */
+            gap: 15px; 
+        }
+
+        /* 4. LISTA DE TAREAS (LI) - Crucial para botones */
+        #taskList li > div {
+            flex-direction: column; /* Apila el texto y los botones */
+            align-items: flex-start;
+        }
+        #taskList li span {
+            margin-bottom: 5px; /* Espacio después del texto de la tarea */
+            display: block;
+            width: 100%; /* Asegura que ocupe todo el ancho para el tap */
+            cursor: pointer;
+        }
+        #taskList li > div > div {
+            /* Contenedor de botones (Editar, Iniciar/Detener, Eliminar) */
+            display: flex;
+            flex-wrap: wrap; /* Envuelve los botones si no caben */
+            margin-top: 5px;
+            width: 100%;
+        }
+        #taskList li > div > div button {
+            margin: 3px 5px 3px 0; /* Espaciado más compacto */
+        }
+        
+        /* 5. CALENDARIO */
+        .calendar {
+            grid-template-columns: repeat(3, 1fr); /* Muestra 3 columnas en lugar de 5 en móvil */
+        }
+        .day {
+            min-height: 80px; /* Aumenta un poco la altura para el tacto */
+            padding: 5px;
+        }
+        
+        /* 6. BANNER DE ALERTA */
+        .alert-banner {
+            flex-direction: column;
+        }
+        .alert-banner button {
+            align-self: flex-start; /* Alinea el botón de cerrar */
+            margin-left: 0;
+            margin-top: 5px;
+        }
     }
 </style>
 
@@ -687,13 +778,10 @@
         
         const totalTasks = tasks.length;
 
-        // 1. Asignar ID (ya se hace en loadDataFromCloud o addTask)
-        // 2. Separar y ordenar (Pendientes: más nueva arriba / Completadas: más nueva arriba, al final)
+        // 1. Separar y ordenar (Pendientes: más nueva arriba / Completadas: más nueva arriba, al final)
         let pendingTasks = tasks.filter(t => !t.done);
         let completedTasks = tasks.filter(t => t.done);
         
-        // Asumiendo que el índice en el array ya refleja el orden de creación (o se añade un createdAt)
-        // Por ahora, ordenamos por índice del array original (que mantiene el orden de creación/adición).
         pendingTasks.sort((a, b) => b.id.localeCompare(a.id)); 
         completedTasks.sort((a, b) => b.id.localeCompare(a.id)); 
         
@@ -704,7 +792,17 @@
             const taskNumber = i + 1; 
 
             const li = document.createElement('li');
-            li.className = task.done ? 'completed' : '';
+            
+            // ----------------------------------------------------
+            // LÓGICA DE CLASES (1.1, 1.2)
+            // ----------------------------------------------------
+            let classList = task.done ? 'completed' : '';
+            // Si no está completada y tiene el cronómetro corriendo, añade la clase de animación
+            if (!task.done && task.startTime !== null) { 
+                classList += ' task-running'; 
+            }
+            li.className = classList.trim(); 
+            // ----------------------------------------------------
             
             const tagText = task.tag || 'Sin etiqueta';
             let styledTag = tagText;
@@ -764,7 +862,7 @@
 
             } else {
                  timerDisplay = ` | Tiempo Total: <strong>${formatTime(currentElapsedTime)}</strong>`;
-                 // Botón de eliminación directa para completadas (opcional, si no se usan los botones de Completo/Borrar)
+                 // Botón de eliminación directa para completadas 
                  actionButtonsHTML = `
                     <button onclick="deleteTask('${taskId}')" style="background: #f44336; margin: 0; padding: 5px 10px;">
                         🗑️
@@ -775,7 +873,7 @@
             // Estructura del LI (Tarea + Botones de Acción)
             li.innerHTML = `
                 <div style="display: flex; justify-content: space-between; align-items: center;">
-                    <span onclick="toggleTask('${taskId}')" style="flex-grow: 1;">
+                    <span onclick="toggleTask('${taskId}')" style="flex-grow: 1;"> 
                         ${taskNumber}. ${task.text} (${styledTag}) - ${displayDate}
                         ${timerDisplay}
                     </span>
