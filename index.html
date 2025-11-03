@@ -70,11 +70,20 @@
         white-space: normal;
         transition: background-color 0.3s, box-shadow 0.3s;
     }
-    .completed { 
-        text-decoration: line-through; 
-        color: gray; 
-        background: #f1f1f1; 
+    
+    /* === NUEVOS ESTILOS PARA DRAG AND DROP === */
+    li.draggable {
+        cursor: grab; /* Cursor para indicar arrastre */
     }
+    
+    li.dragging {
+        opacity: 0.5;
+        border: 2px dashed #333;
+        background: #e0f7fa;
+    }
+    
+    .completed { text-decoration: line-through; color: gray; background: #f1f1f1; }
+    
     .calendar { display: grid; grid-template-columns: repeat(5, 1fr); gap: 5px; } 
     .day { background: #ddd; padding: 10px; border-radius: 5px; min-height: 60px; }
     
@@ -152,8 +161,8 @@
         font-weight: bold;
         color: orange;
     }
-
-    /* === ESTILOS PARA EL TIME TRACKING ACTIVO (1.2) === */
+    
+    /* Estilos para Time Tracking activo (1.2) */
     @keyframes pulse-active {
         0% { box-shadow: 0 0 5px rgba(56, 142, 60, 0.4); }
         50% { box-shadow: 0 0 10px rgba(56, 142, 60, 0.8); }
@@ -166,97 +175,11 @@
     }
     /* ======================================================= */
 
-    /* === MEDIA QUERIES PARA RESPONSIVIDAD (Paso 2) === */
-    @media (max-width: 768px) {
-        body {
-            padding: 0 10px; /* Reduce padding lateral */
-        }
-        
-        /* 1. LAYOUT PRINCIPAL */
-        .header-container {
-            flex-direction: column; /* Apila el título y el botón Salir */
-            align-items: flex-start;
-        }
-        .header-container h1 {
-            font-size: 1.5em;
-        }
-
-        /* 2. TAREAS Y CONTROLES */
-        .task-inputs-row {
-            flex-direction: column; /* Apila Etiqueta y Fecha */
-            gap: 0;
-        }
-        .task-inputs-row select,
-        .task-inputs-row input[type="date"] {
-            width: 100%; /* Ocupan todo el ancho */
-            margin-bottom: 5px;
-        }
-
-        /* 3. BOTONES DE ACCIÓN */
-        .task-buttons {
-            flex-direction: column; /* Apila los grupos de botones */
-            gap: 15px; 
-        }
-
-        /* 4. LISTA DE TAREAS (LI) - Crucial para botones */
-        #taskList li > div {
-            flex-direction: column; /* Apila el texto y los botones */
-            align-items: flex-start;
-        }
-        #taskList li span {
-            margin-bottom: 5px; /* Espacio después del texto de la tarea */
-            display: block;
-            width: 100%; /* Asegura que ocupe todo el ancho para el tap */
-            cursor: pointer;
-        }
-        #taskList li > div > div {
-            /* Contenedor de botones (Editar, Iniciar/Detener, Eliminar) */
-            display: flex;
-            flex-wrap: wrap; /* Envuelve los botones si no caben */
-            margin-top: 5px;
-            width: 100%;
-        }
-        #taskList li > div > div button {
-            margin: 3px 5px 3px 0; /* Espaciado más compacto */
-        }
-        
-        /* 5. CALENDARIO */
-        .calendar {
-            grid-template-columns: repeat(3, 1fr); /* Muestra 3 columnas en lugar de 5 en móvil */
-        }
-        .day {
-            min-height: 80px; /* Aumenta un poco la altura para el tacto */
-            padding: 5px;
-        }
-        
-        /* 6. BANNER DE ALERTA */
-        .alert-banner {
-            flex-direction: column;
-        }
-        .alert-banner button {
-            align-self: flex-start; /* Alinea el botón de cerrar */
-            margin-left: 0;
-            margin-top: 5px;
-        }
-
-        /* 7. FILTROS RÁPIDOS y ORDENACIÓN */
-        #filterButtons {
-            flex-direction: column;
-        }
-        #filterButtons button {
-            width: 100%;
-            margin: 3px 0;
-        }
-        #sortSelector {
-            width: 100% !important;
-            max-width: none !important;
-        }
-    }
 </style>
 
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script> 
+<script src="https://www.gstatic.com/firebasejs/9.9.0/firebase-auth-compat.js"></script> 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
 </head>
@@ -309,7 +232,7 @@
                 </div>
                 
                 <div style="display: flex; gap: 10px; flex-wrap: wrap;">
-                    <button id="addTaskBtn" onclick="addTask()">Agregar tarea</button>
+                    <button onclick="addTask()">Agregar tarea</button>
                     <button onclick="startDictation()">🎙️ Comenzar dictado</button>
                 </div>
             </div>
@@ -317,55 +240,6 @@
             <p id="recordingTimer" style="margin-top: 10px; text-align: right;">⏱️ Tiempo de grabación: 0 segundos</p>
             <p id="statusMessage" style="color: blue;">Esperando inicio de sesión...</p>
 
-            <div style="margin-bottom: 15px; display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
-                <label for="sortSelector" style="font-weight: bold;">Ordenar por:</label>
-                <select id="sortSelector" onchange="renderTasks()" style="width: auto; flex-grow: 1; max-width: 300px;">
-                    <option value="default">Recientes (Por defecto)</option>
-                    <option value="dateAsc">Fecha (Próxima primero)</option>
-                    <option value="dateDesc">Fecha (Última primero)</option>
-                    <option value="tagPriority">Prioridad (Urgente primero)</option>
-                </select>
-            </div>
-            <div id="filterButtons" style="margin-bottom: 15px; display: flex; gap: 10px; flex-wrap: wrap;">
-                <button 
-                    onclick="filterTasks(null)" 
-                    style="background: #007bff; font-weight: bold;"
-                    id="filter-all">
-                    Mostrar Todas
-                </button>
-                <button 
-                    onclick="filterTasks('Urgente')" 
-                    style="background: #dc3545;"
-                    id="filter-Urgente">
-                    Urgente
-                </button>
-                <button 
-                    onclick="filterTasks('Reunión')" 
-                    style="background: #ffc107; color: #333;"
-                    id="filter-Reunión">
-                    Reunión
-                </button>
-                <button 
-                    onclick="filterTasks('Importante')" 
-                    style="background: #28a745;"
-                    id="filter-Importante">
-                    Importante
-                </button>
-                <button 
-                    onclick="filterTasks('Pendiente')" 
-                    style="background: #6c757d;"
-                    id="filter-Pendiente">
-                    Pendiente
-                </button>
-            </div>
-            <div id="timeSummary" style="padding: 10px; margin-bottom: 15px; background: #e0f7fa; border-radius: 5px; border-left: 5px solid #00bcd4;">
-                <p style="margin: 0; font-weight: bold;">
-                    Tiempo total de trabajo acumulado: <span id="totalTimeTracked">00:00:00</span>
-                </p>
-                <p style="margin: 5px 0 0 0; font-size: 0.9em;">
-                    Tareas con tiempo registrado: <span id="tasksWithTimeCount">0</span>
-                </p>
-            </div>
             <ul id="taskList"></ul>
             <p class="stats" id="taskStats"></p>
         </div>
@@ -436,8 +310,8 @@
     let completedTasksBackup = []; // Tareas de respaldo
     let timerUpdateInterval;
     let currentCalendarDate = new Date(); 
-    let editingTaskId = null; 
-    let currentTagFilter = null; // Filtro de etiqueta actual (null = todas)
+    let draggedElement = null; // Para Drag and Drop
+
 
     // Elementos DOM
     const loginSection = document.getElementById('loginSection');
@@ -455,17 +329,6 @@
         return Date.now().toString(36) + Math.random().toString(36).substring(2);
     }
     
-    // NUEVA FUNCIÓN: Muestra un mensaje temporal de éxito
-    function showSuccessBanner(message) {
-        const statusMessage = document.getElementById('statusMessage');
-        statusMessage.style.color = 'green';
-        statusMessage.innerText = message;
-        setTimeout(() => {
-            statusMessage.style.color = 'blue';
-            statusMessage.innerText = "Cargado desde la nube."; 
-        }, 3000);
-    }
-
     function formatDateToDisplay(dateStr) {
         if (!dateStr || dateStr.length !== 10) return 'Sin fecha';
         const parts = dateStr.split('-'); // [YYYY, MM, DD]
@@ -475,7 +338,7 @@
         return dateStr;
     }
 
-    // NUEVA FUNCIÓN: Obtiene la fecha de hoy en formato YYYY-MM-DD para el input[type="date"]
+    // Obtiene la fecha de hoy en formato YYYY-MM-DD para el input[type="date"]
     function getTodayDateStrForInput() {
         const today = new Date();
         const year = today.getFullYear();
@@ -612,52 +475,26 @@
             statusMessage.innerText = `🚨 Error de conexión/reglas de Firebase: ${e.code || e.message}.`;
         }
         
-        // Asegurar que las tareas antiguas sin ID lo obtengan
-        tasks = tasks.map(t => ({ ...t, id: t.id || generateId() }));
+        // CORRECCIÓN CRÍTICA: Asegurar que todas las tareas tengan un ID único
+        tasks = tasks.map(t => ({ 
+            ...t, 
+            id: t.id || generateId() 
+        }));
 
         renderTasks();
         renderCalendar();
         checkUpcomingTasks(); 
-        highlightFilterButton(currentTagFilter); 
     }
     
-    // ----------------------------------------------------------------------
-    // 📊 FUNCIONES DE ESTADÍSTICAS (Paso 3.2) 📊
-    // ----------------------------------------------------------------------
-
-    function updateTimeSummary() {
-        let totalMs = 0;
-        let tasksWithTime = 0;
-
-        tasks.forEach(t => {
-            let currentElapsedTime = t.elapsedTime || 0;
-            
-            // Si la tarea está corriendo, añade la diferencia desde startTime hasta ahora
-            if (t.startTime !== null) {
-                currentElapsedTime += (Date.now() - t.startTime);
-            }
-
-            totalMs += currentElapsedTime;
-            
-            if (currentElapsedTime > 0) {
-                tasksWithTime++;
-            }
-        });
-
-        document.getElementById('totalTimeTracked').innerText = formatTime(totalMs);
-        document.getElementById('tasksWithTimeCount').innerText = tasksWithTime;
-    }
-
     // ----------------------------------------------------------------------
     // ⏱️ FUNCIONES DEL TIME TRACKER ⏱️
     // ----------------------------------------------------------------------
 
-    // MODIFICADO: Ahora usa taskId para la estabilidad
+    // MODIFICADO: Ahora usa taskId
     function toggleTimer(taskId) {
-        const originalIndex = tasks.findIndex(t => t.id === taskId);
-        if (originalIndex === -1) return;
+        const task = tasks.find(t => t.id === taskId);
+        if (!task) return;
 
-        const task = tasks[originalIndex];
         const now = Date.now();
 
         // Inicializar si no existen
@@ -687,139 +524,17 @@
             clearInterval(timerUpdateInterval);
         }
         if (auth.currentUser) {
-            timerUpdateInterval = setInterval(() => {
-                renderTasks(); 
-                updateTimeSummary(); // Asegura que el resumen se actualice cada segundo
-            }, 1000); 
+            // Se actualiza cada segundo para que el cronómetro se vea progresar
+            timerUpdateInterval = setInterval(renderTasks, 1000); 
         }
     }
 
-    // ----------------------------------------------------------------------
-    // 🏷️ FUNCIONES DE FILTRO (Paso 3.1) 🏷️
-    // ----------------------------------------------------------------------
-
-    function filterTasks(tag) {
-        currentTagFilter = tag; // Establece el filtro (ej: 'Urgente' o null)
-        renderTasks();         // Vuelve a dibujar la lista de tareas
-        highlightFilterButton(tag); // Llama a la función para resaltar el botón
-    }
-
-    // NUEVA FUNCIÓN: Resalta el botón de filtro activo
-    function highlightFilterButton(activeTag) {
-        const buttons = document.querySelectorAll('#filterButtons button');
-        buttons.forEach(button => {
-            // Quita cualquier resaltado (color primario)
-            button.style.border = 'none'; 
-            button.style.padding = '10px 15px'; 
-
-            // Resalta el botón activo
-            if (button.id === `filter-${activeTag}` || (activeTag === null && button.id === 'filter-all')) {
-                button.style.border = '2px solid #000'; // Borde negro para el activo
-                button.style.padding = '8px 13px'; // Ajustar padding para compensar el borde
-            }
-        });
-    }
 
     // ----------------------------------------------------------------------
-    // 🗂️ FUNCIONES DE ORDENACIÓN (Paso 4.1) 🗂️
+    // ---- LÓGICA DE LA APLICACIÓN (MODIFICADA PARA USAR ID) ----
     // ----------------------------------------------------------------------
 
-    // Define un mapa de prioridad para las etiquetas
-    const TAG_PRIORITY = {
-        'Urgente': 1,
-        'Importante': 2,
-        'Reunión': 3,
-        'Pendiente': 4,
-        '': 5, // Sin etiqueta (Prioridad baja)
-        undefined: 5
-    };
-
-    function sortComparator(a, b, type) {
-        // La lógica de ordenación se aplica solo a las tareas PENDIENTES.
-
-        if (type === 'dateAsc' || type === 'dateDesc') {
-            // Manejo de fechas vacías (las tareas sin fecha van al final)
-            // '9999-12-31' se usa como una fecha muy lejana
-            const dateA = a.date || '9999-12-31'; 
-            const dateB = b.date || '9999-12-31';
-
-            // Si ambas son 'sin fecha', el orden es neutro
-            if (dateA === '9999-12-31' && dateB === '9999-12-31') return 0;
-            // Si solo una es 'sin fecha', la que tiene fecha va primero
-            if (dateA === '9999-12-31') return 1; 
-            if (dateB === '9999-12-31') return -1; 
-
-            // Comparación de fechas
-            if (type === 'dateAsc') {
-                return dateA.localeCompare(dateB); // Ascendente (más cercana primero)
-            } else { // dateDesc
-                return dateB.localeCompare(dateA); // Descendente (más lejana primero)
-            }
-
-        } else if (type === 'tagPriority') {
-            const prioA = TAG_PRIORITY[a.tag] || TAG_PRIORITY[''];
-            const prioB = TAG_PRIORITY[b.tag] || TAG_PRIORITY[''];
-
-            // 1. Ordenar por prioridad (menor número = mayor prioridad)
-            if (prioA !== prioB) {
-                return prioA - prioB;
-            }
-            
-            // 2. Si las prioridades son iguales, usar el orden por defecto (más reciente primero)
-            return b.id.localeCompare(a.id); 
-
-        } else {
-            // 'default' (Recientes primero)
-            return b.id.localeCompare(a.id);
-        }
-    }
-
-    // ----------------------------------------------------------------------
-    // ✏️ FUNCIONES DE EDICIÓN Y GESTIÓN DE TAREAS ✏️
-    // ----------------------------------------------------------------------
-    
-    // NUEVA FUNCIÓN: Restablece el formulario y el modo de edición
-    function resetTaskForm() {
-        const taskInput = document.getElementById('taskInput');
-        const taskTag = document.getElementById('taskTag');
-        const addTaskBtn = document.getElementById('addTaskBtn');
-        
-        taskInput.value = '';
-        taskTag.value = ''; // Limpiar etiqueta
-        initializeDateInput(); // Restablecer fecha a la de hoy
-        
-        editingTaskId = null;
-        addTaskBtn.textContent = 'Agregar tarea';
-    }
-
-    // NUEVA FUNCIÓN: Carga la tarea seleccionada en el formulario
-    function editTask(taskId) {
-        const taskInput = document.getElementById('taskInput');
-        const taskTag = document.getElementById('taskTag');
-        const taskDate = document.getElementById('taskDate');
-        const addTaskBtn = document.getElementById('addTaskBtn');
-
-        const taskToEdit = tasks.find(t => t.id === taskId);
-
-        if (!taskToEdit) {
-            console.error("No se encontró la tarea con ID:", taskId);
-            return;
-        }
-
-        // 1. Cargar los datos
-        taskInput.value = taskToEdit.text;
-        taskTag.value = taskToEdit.tag || '';
-        taskDate.value = taskToEdit.date;
-        
-        // 2. Preparar el sistema para la edición
-        editingTaskId = taskId;
-        addTaskBtn.textContent = 'Guardar Cambios';
-
-        // 3. Mover la vista a la parte superior
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-    }
-
-    // MODIFICADO: Maneja la adición y la edición
+    // MODIFICADO: Usa generateId()
     function addTask(text = null) {
         const taskInput = document.getElementById('taskInput');
         const taskDateInput = document.getElementById('taskDate'); 
@@ -829,38 +544,24 @@
         const date = taskDateInput.value; 
         
         if (taskText.trim()) {
-            
-            if (editingTaskId) {
-                // 1. MODO EDICIÓN (Actualizar tarea existente)
-                const taskIndex = tasks.findIndex(t => t.id === editingTaskId);
-                if (taskIndex !== -1) {
-                    tasks[taskIndex].text = taskText.trim();
-                    tasks[taskIndex].tag = tag;
-                    tasks[taskIndex].date = date; 
-                    showSuccessBanner('Tarea actualizada exitosamente.');
-                }
-            } else {
-                // 2. MODO CREACIÓN (Crear nueva tarea)
-                tasks.push({ 
-                    id: generateId(), // **Añadido ID**
-                    text: taskText.trim(), 
-                    tag, 
-                    date, 
-                    done: false,
-                    startTime: null,      
-                    elapsedTime: 0        
-                });
-                showSuccessBanner('Tarea añadida exitosamente.');
-            }
-            
+            tasks.push({ 
+                id: generateId(), // **CRÍTICO: ID ÚNICO**
+                text: taskText.trim(), 
+                tag, 
+                date, 
+                done: false,
+                startTime: null,      
+                elapsedTime: 0        
+            });
             saveData();
             
             if (!text) { 
                  taskInput.value = '';
+                 document.getElementById('taskTag').value = ''; // Limpiar etiqueta
             }
             
-            // Restablece el formulario y el modo de edición
-            resetTaskForm(); 
+            // Restablece el campo de fecha a la fecha actual después de agregar la tarea
+            initializeDateInput(); 
             
             renderTasks();
             renderCalendar();
@@ -868,24 +569,23 @@
         }
     }
 
-    // MODIFICADO: Ahora usa taskId para la estabilidad
+    // MODIFICADO: Ahora usa taskId
     function toggleTask(taskId) {
-        const index = tasks.findIndex(t => t.id === taskId);
-        if (index === -1) return;
+        const task = tasks.find(t => t.id === taskId);
+        if (!task) return;
 
-        tasks[index].done = !tasks[index].done;
+        task.done = !task.done;
 
         // Si se completa, detener el cronómetro y acumular tiempo
-        if (tasks[index].done && tasks[index].startTime !== null) {
+        if (task.done && task.startTime !== null) {
             const now = Date.now();
-            const duration = now - tasks[index].startTime;
-            tasks[index].elapsedTime = (tasks[index].elapsedTime || 0) + duration;
-            tasks[index].startTime = null;
+            const duration = now - task.startTime;
+            task.elapsedTime = (task.elapsedTime || 0) + duration;
+            task.startTime = null;
         }
         
-        // Si se descompleta, asegurar que startTime sea null si no se quiere que corra al inicio.
-        if (!tasks[index].done) {
-            tasks[index].startTime = null; 
+        if (!task.done) {
+            task.startTime = null; 
         }
 
         saveData();
@@ -893,22 +593,6 @@
         renderCalendar();
         checkUpcomingTasks();
     }
-    
-    // NUEVA FUNCIÓN: Eliminar una tarea individual por ID
-    function deleteTask(taskId) {
-        if (!auth.currentUser) return;
-
-        // Filtrar tareas que NO coinciden con el ID
-        tasks = tasks.filter(t => t.id !== taskId);
-        
-        saveData(); 
-        
-        renderTasks();
-        renderCalendar(); 
-        checkUpcomingTasks(); 
-        showSuccessBanner('Tarea eliminada.');
-    }
-
 
     // MODIFICADO: Mover tareas completadas a la lista de respaldo antes de eliminarlas
     function deleteCompletedTasks() {
@@ -918,7 +602,8 @@
             .filter(t => t.done)
             .map(t => ({
                 ...t,
-                id: t.id || Date.now() + Math.random(), // Usar ID existente o generar uno
+                // Usar ID existente (t.id) o generar uno si no existe (por seguridad)
+                id: t.id || Date.now() + Math.random(), 
                 deletedDate: new Date().toISOString().slice(0, 10) // Fecha de borrado
             }));
 
@@ -945,49 +630,53 @@
         checkUpcomingTasks(); 
     }
 
+    // MODIFICADA: Ahora adjunta eventos de doble click y ID al span
     function renderTasks() {
         const list = document.getElementById('taskList');
         list.innerHTML = '';
         
-        // 1. APLICAR FILTRO: Usa la variable global 'currentTagFilter'
-        let tasksToRender = tasks;
-        if (currentTagFilter !== null) {
-            tasksToRender = tasks.filter(t => t.tag === currentTagFilter);
-        }
-        
-        const totalTasksRendered = tasksToRender.length; 
+        const totalTasks = tasks.length;
 
-        // 2. Separar y ordenar (Pendientes: se ordenan según el selector. Completadas: siempre recientes primero)
-        let pendingTasks = tasksToRender.filter(t => !t.done);
-        let completedTasks = tasksToRender.filter(t => t.done);
+        // 1. Separar tareas pendientes y completadas.
+        let pendingTasks = tasks.filter(t => !t.done);
+        let completedTasks = tasks.filter(t => t.done);
         
-        // Obtener el tipo de ordenación seleccionado (Paso 4.1)
-        const sortType = document.getElementById('sortSelector').value;
-        
-        // Aplicar ordenación dinámica a las tareas pendientes
-        pendingTasks.sort((a, b) => sortComparator(a, b, sortType));
-        
-        // Las tareas completadas siempre se ordenan por defecto (más recientes primero)
+        // 2. TAREAS PENDIENTES: Se muestran en el orden exacto del array (para Drag & Drop).
+        // 3. TAREAS COMPLETADAS: Se ordenan por más recientes primero y se añaden al final.
         completedTasks.sort((a, b) => b.id.localeCompare(a.id)); 
         
         const sortedTasks = [...pendingTasks, ...completedTasks];
         
         sortedTasks.forEach((task, i) => {
-            const taskId = task.id; // USAR ID para todas las acciones
+            const taskId = task.id; // **USAR ID**
             const taskNumber = i + 1; 
 
             const li = document.createElement('li');
+            li.setAttribute('data-task-id', taskId); // ID para mapear en el drop
+
+            let classList = task.done ? 'completed' : '';
             
             // ----------------------------------------------------
-            // LÓGICA DE CLASES (1.1, 1.2)
+            // LÓGICA DE DRAG & DROP y CLASES
             // ----------------------------------------------------
-            let classList = task.done ? 'completed' : '';
-            // Si no está completada y tiene el cronómetro corriendo, añade la clase de animación
-            if (!task.done && task.startTime !== null) { 
-                classList += ' task-running'; 
+            if (!task.done) {
+                // Tareas pendientes son arrastrables
+                li.setAttribute('draggable', 'true');
+                li.classList.add('draggable');
+                li.addEventListener('dragstart', handleDragStart);
+                li.addEventListener('dragover', handleDragOver);
+                li.addEventListener('drop', handleDrop);
+                li.addEventListener('dragenter', (e) => e.preventDefault()); // Permite drop
+                
+                // Si está corriendo el cronómetro
+                if (task.startTime !== null) { 
+                    classList += ' task-running'; 
+                }
             }
-            li.className = classList.trim(); 
-            // ----------------------------------------------------
+
+            if (classList.trim().length > 0) {
+                li.className = classList.trim(); 
+            }
             
             const tagText = task.tag || 'Sin etiqueta';
             let styledTag = tagText;
@@ -999,7 +688,7 @@
             const displayDate = formatDateToDisplay(task.date);
 
             // ----------------------------------------------------
-            // ⏱️ LÓGICA DE TIEMPO Y BOTÓN
+            // ⏱️ LÓGICA DE TIEMPO Y BOTÓN 
             // ----------------------------------------------------
             if (typeof task.elapsedTime === 'undefined') task.elapsedTime = 0;
             if (typeof task.startTime === 'undefined') task.startTime = null;
@@ -1008,11 +697,7 @@
             let timerButtonHTML = '';
             let timerDisplay = '';
             
-            // Botones de acción (Editar, Cronómetro, Eliminar)
-            let actionButtonsHTML = '';
-            
             if (!task.done) {
-                // Lógica de cronómetro
                 if (task.startTime !== null) {
                     currentElapsedTime += (Date.now() - task.startTime);
                     
@@ -1033,53 +718,219 @@
                     `;
                 }
                 timerDisplay = ` | Tiempo: <strong>${formatTime(currentElapsedTime)}</strong>`;
-
-                // Botones de edición/eliminación para tareas pendientes
-                actionButtonsHTML = `
-                    ${timerButtonHTML}
-                    <button onclick="editTask('${taskId}')" style="background: #ffc107; color: #333; margin: 0; padding: 5px 10px;">
-                        Editar
-                    </button>
-                    <button onclick="deleteTask('${taskId}')" style="background: #f44336; margin: 0; padding: 5px 10px;">
-                        🗑️
-                    </button>
-                `;
-
             } else {
                  timerDisplay = ` | Tiempo Total: <strong>${formatTime(currentElapsedTime)}</strong>`;
-                 // Botón de eliminación directa para completadas 
-                 actionButtonsHTML = `
-                    <button onclick="deleteTask('${taskId}')" style="background: #f44336; margin: 0; padding: 5px 10px;">
-                        🗑️
-                    </button>
-                 `;
+                 timerButtonHTML = ``; 
             }
             
-            // Estructura del LI (Tarea + Botones de Acción)
+            const taskDisplayContent = `${taskNumber}. ${task.text} (${styledTag}) - ${displayDate}${timerDisplay}`;
+            const mainSpanId = `task-text-${taskId}`;
+            
+            // Estructura del LI (El span principal recibe el ID para adjuntar eventos)
             li.innerHTML = `
                 <div style="display: flex; justify-content: space-between; align-items: center;">
-                    <span onclick="toggleTask('${taskId}')" style="flex-grow: 1;"> 
-                        ${taskNumber}. ${task.text} (${styledTag}) - ${displayDate}
-                        ${timerDisplay}
+                    <span id="${mainSpanId}" style="flex-grow: 1; user-select: none;"> 
+                        ${taskDisplayContent}
                     </span>
-                    <div style="display: flex; gap: 5px;">
-                        ${actionButtonsHTML}
-                    </div>
+                    ${timerButtonHTML}
                 </div>
             `;
             
             list.appendChild(li);
+            
+            // ----------------------------------------------------------------------
+            // ✏️ POST-RENDER: ATTACH EVENTS (Toggle and Inline Edit) ✏️
+            // ----------------------------------------------------------------------
+            const mainSpan = document.getElementById(mainSpanId);
+
+            if (!task.done) {
+                // Tarea Pendiente: Toggle con un click, Editar con doble click
+                mainSpan.onclick = () => toggleTask(taskId); 
+                mainSpan.ondblclick = (e) => { 
+                    e.stopPropagation(); 
+                    // Pasamos el texto *puro* de la tarea (task.text) y el elemento SPAN
+                    editTaskInline(taskId, task.text, mainSpan); 
+                };
+            } else {
+                // Tarea Completada: Solo Toggle
+                mainSpan.onclick = () => toggleTask(taskId);
+            }
+            // ----------------------------------------------------------------------
         });
         
-        // El cálculo de estadísticas debe usar la lista COMPLETA de tareas (no solo la renderizada)
-        const allCompleted = tasks.filter(t => t.done).length;
-        const allTotal = tasks.length;
-        document.getElementById('taskStats').innerText = `Completadas: ${allCompleted} / Pendientes: ${allTotal - allCompleted} (Mostrando: ${totalTasksRendered} tareas)`;
-        
-        // **NUEVA LÍNEA:**
-        updateTimeSummary();
+        const completed = tasks.filter(t => t.done).length;
+        document.getElementById('taskStats').innerText = `Completadas: ${completed} / Pendientes: ${totalTasks - completed}`;
     }
     
+    // ----------------------------------------------------------------------
+    // ✏️ FUNCIONES DE EDICIÓN EN LÍNEA (Inline Editing) ✏️
+    // ----------------------------------------------------------------------
+
+    /**
+     * Reemplaza la tarea en la lista por un textarea editable.
+     * @param {string} taskId - El ID único de la tarea.
+     * @param {string} currentText - El texto actual de la tarea.
+     * @param {HTMLElement} targetSpan - El elemento span que se hizo doble clic.
+     */
+    function editTaskInline(taskId, currentText, targetSpan) {
+        const task = tasks.find(t => t.id === taskId);
+        if (!task || task.done) return;
+        
+        // 1. Crear el textarea
+        const textarea = document.createElement('textarea');
+        textarea.value = currentText; 
+        textarea.style.width = '100%'; 
+        textarea.style.minHeight = '50px';
+        textarea.style.margin = '0';
+        textarea.style.resize = 'vertical';
+        textarea.style.border = '2px solid #1976d2'; 
+        textarea.style.borderRadius = '4px';
+        textarea.style.boxSizing = 'border-box'; 
+
+        // 2. Crear un nuevo LI temporal para la edición
+        const originalLi = targetSpan.closest('li');
+        const editLi = document.createElement('li');
+        editLi.style.background = '#e3f2fd'; // Azul claro para indicar edición
+        editLi.style.padding = '10px';
+        editLi.style.cursor = 'default';
+        editLi.classList.add('editing'); // Clase para evitar Drag/Drop
+
+        editLi.innerHTML = `
+            <div style="display: flex; flex-direction: column; gap: 5px;">
+                <p style="font-size: 0.9em; margin: 0; color: #666;">📝 Editando: (Presiona Enter o Sal de aquí para guardar)</p>
+            </div>
+        `;
+        editLi.appendChild(textarea);
+        
+        // 3. Reemplazar el LI original por el LI de edición temporal
+        originalLi.replaceWith(editLi);
+
+        // 4. Evento para guardar al perder el foco (blur)
+        textarea.onblur = () => {
+             // Pequeño retardo para asegurar que el blur no se active inmediatamente
+            setTimeout(() => saveTaskEdit(taskId, textarea.value.trim()), 100);
+        };
+        
+        // 5. Evento para guardar al presionar ENTER
+        textarea.onkeypress = (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault(); 
+                textarea.blur(); // Ejecuta el onblur para guardar
+            }
+        };
+
+        textarea.focus();
+        textarea.select(); // Selecciona todo el texto para fácil reemplazo.
+    }
+
+    /**
+     * Guarda el nuevo texto de la tarea en el array y en Firebase.
+     * @param {string} taskId - El ID único de la tarea.
+     * @param {string} newText - El nuevo texto de la tarea.
+     */
+    function saveTaskEdit(taskId, newText) {
+        const task = tasks.find(t => t.id === taskId);
+        
+        if (!task) return;
+
+        if (newText) {
+            task.text = newText;
+            saveData(); 
+        } else {
+             alert("La tarea no puede quedar vacía. No se guardaron los cambios.");
+        }
+        
+        // Siempre re-renderizar para restaurar la vista original de la lista
+        renderTasks(); 
+    }
+    
+    // ----------------------------------------------------------------------
+    // ✋ FUNCIONES DE DRAG AND DROP (ARRRASTRAR Y SOLTAR) ✋
+    // ----------------------------------------------------------------------
+
+    function handleDragStart(e) {
+        // Solo permitir arrastrar tareas pendientes
+        if (e.target.classList.contains('completed')) {
+            e.preventDefault();
+            return;
+        }
+        
+        draggedElement = e.target;
+        e.dataTransfer.effectAllowed = 'move';
+        e.dataTransfer.setData('text/html', draggedElement.innerHTML);
+        
+        // Pequeño retardo para que la clase no se aplique al drag image
+        setTimeout(() => {
+            draggedElement.classList.add('dragging');
+        }, 0);
+    }
+
+    function handleDragOver(e) {
+        // Evita el comportamiento por defecto (que es 'no permitir drop')
+        e.preventDefault(); 
+        
+        const target = e.target.closest('li.draggable');
+        if (target && target !== draggedElement) {
+            // Lógica para determinar si colocar antes o después
+            const targetRect = target.getBoundingClientRect();
+            const offset = targetRect.y + targetRect.height / 2;
+
+            if (e.clientY > offset) {
+                // Si el cursor está en la mitad inferior, intenta ponerlo DESPUÉS
+                if (target.nextSibling !== draggedElement) {
+                    document.getElementById('taskList').insertBefore(draggedElement, target.nextSibling);
+                }
+            } else {
+                // Si el cursor está en la mitad superior, intenta ponerlo ANTES
+                if (target !== draggedElement.nextSibling) {
+                    document.getElementById('taskList').insertBefore(draggedElement, target);
+                }
+            }
+        }
+    }
+
+    function handleDrop(e) {
+        e.preventDefault();
+        
+        if (draggedElement) {
+            draggedElement.classList.remove('dragging');
+            
+            // Si el elemento soltado es una tarea pendiente
+            if (!draggedElement.classList.contains('completed')) {
+                 reorderTasksInArray();
+            }
+        }
+    }
+    
+    // NUEVA FUNCIÓN: Actualiza el array de 'tasks' según el orden del DOM
+    function reorderTasksInArray() {
+        const taskList = document.getElementById('taskList');
+        const listItems = Array.from(taskList.children);
+        
+        // 1. Obtener el orden de los IDs de las tareas PENDIENTES
+        const newPendingOrderIds = listItems
+            .filter(li => !li.classList.contains('completed'))
+            .map(li => li.getAttribute('data-task-id'));
+
+        // 2. Obtener las tareas completadas
+        const completedTasks = tasks.filter(t => t.done);
+        
+        // 3. Crear el nuevo array de tareas: Pendientes (en el nuevo orden) + Completadas (al final)
+        const newPendingTasks = newPendingOrderIds.map(id => tasks.find(t => t.id === id));
+        
+        // 4. Asignar el nuevo orden al array global y guardar
+        tasks = [...newPendingTasks, ...completedTasks];
+        saveData();
+        
+        // 5. Volver a renderizar para actualizar los números de tarea (1, 2, 3...)
+        renderTasks();
+    }
+
+
+    // ----------------------------------------------------------------------
+    // [SECCIÓN OMITIDA POR BREVEDAD: Contiene funciones auxiliares no modificadas como exportTasks, dictation, backup, calendar, y search]
+    // ----------------------------------------------------------------------
+
     // ---- EXPORTAR TAREAS (A PDF con jsPDF) ----
     function exportTasks() {
         if (tasks.length === 0) {
@@ -1103,6 +954,7 @@
         doc.setFontSize(10);
         doc.setFont(doc.getFont().fontName, 'normal');
 
+        // Usa el array 'tasks' directamente (que ahora está en el orden manual/deseado)
         tasks.forEach((t, index) => {
             const timeWorked = t.elapsedTime ? ` | Tiempo: ${formatTime(t.elapsedTime)}` : '';
             const status = t.done ? '[COMPLETADA]' : '[PENDIENTE]';
@@ -1201,15 +1053,15 @@
     function restoreTask(taskId) {
         if (!auth.currentUser) return;
 
-        const taskToRestore = completedTasksBackup.find(t => t.id == taskId); // Usar == para comparar número/string
+        const taskToRestore = completedTasksBackup.find(t => t.id == taskId); 
         
         if (taskToRestore) {
             // Quitar la tarea del respaldo
             completedTasksBackup = completedTasksBackup.filter(t => t.id != taskId);
             
-            // Agregar a la lista principal como pendiente, SIN campos de Time Tracker viejos
+            // Agregar a la lista principal como pendiente, con NUEVO ID
             tasks.push({ 
-                id: generateId(), // **NUEVO ID para la nueva instancia**
+                id: generateId(),
                 text: taskToRestore.text, 
                 tag: taskToRestore.tag, 
                 date: taskToRestore.date, 
@@ -1275,7 +1127,7 @@
                 const timeTrackerInfo = task.elapsedTime ? 
                     `<div class="time-tracker-info">Tiempo trabajado: ${formatTime(task.elapsedTime)}</div>` : '';
                 
-                // IMPORTANTE: Se usa un ID numérico o de cadena, lo trataremos como string en el JS.
+                // IMPORTANTE: Se usa el ID de la tarea de respaldo
                 backupWindow.document.write(`
                     <li>
                         <div>
@@ -1382,13 +1234,7 @@
 
         const dayNames = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes'];
         
-        // ** MODIFICACIÓN PARA RESPONSIVIDAD DEL CALENDARIO **
-        if (window.matchMedia("(max-width: 768px)").matches) {
-            calendar.style.gridTemplateColumns = 'repeat(3, 1fr)';
-        } else {
-            calendar.style.gridTemplateColumns = 'repeat(5, 1fr)';
-        }
-        // ****************************************************
+        calendar.style.gridTemplateColumns = 'repeat(5, 1fr)';
         
         dayNames.forEach(name => {
             const header = document.createElement('div');
