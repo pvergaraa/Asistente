@@ -336,10 +336,10 @@
                 <input id="taskDate" type="date"/> 
                 <input id="taskTime" type="time" title="Hora para el recordatorio (Opcional)"/> 
                 <select id="alertMinutes" title="Minutos de aviso previo a la hora">
-                    <option value="0" selected>Sin Aviso</option>
+                    <option value="0">Sin Aviso</option>
                     <option value="5">Avisar 5 min antes</option>
                     <option value="10">Avisar 10 min antes</option>
-                    <option value="15">Avisar 15 min antes</option>
+                    <option value="15" selected>Avisar 15 min antes</option>
                     <option value="30">Avisar 30 min antes</option>
                     <option value="60">Avisar 1 hora antes</option>
                 </select>
@@ -349,12 +349,12 @@
                 <div style="display: flex; gap: 10px; flex-wrap: wrap;">
                     <button id="addTaskBtn" onclick="addTask()">Agregar tarea</button>
                     <button onclick="startDictation()">🎙️ Comenzar dictado</button>
-                    <button id="deleteBtn" style="background:#d32f2f" onclick="deleteCompletedTasks()">🗑️ Borrar completadas</button> 
                 </div>
 
                 <div style="display: flex; gap: 10px; flex-wrap: wrap;">
                     <button onclick="exportTasks()">Exportar tareas</button>
                     <button onclick="openBackupWindow()" style="background:#ff9800">📂 Respaldo completadas</button> 
+                    <button id="deleteBtn" style="background:#d32f2f" onclick="deleteCompletedTasks()">🗑️ Borrar completadas</button> 
                 </div>
             </div>
             
@@ -984,19 +984,43 @@
         window.scrollTo({ top: 0, behavior: 'smooth' });
     }
 
-    // MODIFICADO: Maneja la adición y la edición (Añadido 'time' y 'alertMinutes')
+    // MODIFICADO: Añadida la validación de fecha/hora pasada
     function addTask(text = null) {
+        if (!auth.currentUser) return;
+
         const taskInput = document.getElementById('taskInput');
-        const taskDateInput = document.getElementById('taskDate'); 
-        const taskTimeInput = document.getElementById('taskTime'); 
-        const alertMinutesInput = document.getElementById('alertMinutes'); 
-        
+        const taskDateInput = document.getElementById('taskDate');
+        const taskTimeInput = document.getElementById('taskTime');
+        const alertMinutesInput = document.getElementById('alertMinutes');
+
         const taskText = text || taskInput.value;
         const tag = document.getElementById('taskTag').value;
-        const date = taskDateInput.value; 
-        const time = taskTimeInput.value; 
-        const alertMinutes = parseInt(alertMinutesInput.value, 10); 
-        
+        const date = taskDateInput.value;
+        const time = taskTimeInput.value;
+        const alertMinutes = parseInt(alertMinutesInput.value, 10);
+
+        // =========================================================
+        // 💡 CORRECCIÓN FINAL: VALIDACIÓN DE FECHA/HORA EN EL PASADO
+        // =========================================================
+        if (date && time) { 
+            // 1. Combina la fecha y hora seleccionadas en un único objeto Date
+            // El formato "YYYY-MM-DDTHH:mm:ss" asegura un parsing correcto considerando la zona horaria local.
+            const taskDateTimeStr = `${date}T${time}:00`;
+            const taskDateTime = new Date(taskDateTimeStr);
+            
+            // 2. Obtiene la hora actual
+            const now = new Date();
+            
+            // 3. Comprueba si la hora de la tarea es anterior a la actual
+            // Se resta un margen de 60 segundos (60*1000ms) para evitar problemas de microsegundos al crear la tarea.
+            if (taskDateTime.getTime() < now.getTime() - (60 * 1000)) { 
+                alert('🚫 Error de programación: No puedes asignar una hora anterior a la actual a una tarea (se requiere una hora futura). Por favor, revisa la fecha y la hora.');
+                return; // Detiene la función y evita que se cree la tarea.
+            }
+        }
+        // =========================================================
+
+
         if (taskText.trim()) {
             
             if (editingTaskId) {
@@ -1005,9 +1029,9 @@
                 if (taskIndex !== -1) {
                     tasks[taskIndex].text = taskText.trim();
                     tasks[taskIndex].tag = tag;
-                    tasks[index].date = date; 
-                    tasks[index].time = time; 
-                    tasks[index].alertMinutes = alertMinutes; // Guardar minutos de alerta
+                    tasks[taskIndex].date = date; // Corrección: Usar taskIndex
+                    tasks[taskIndex].time = time; // Corrección: Usar taskIndex
+                    tasks[taskIndex].alertMinutes = alertMinutes; // Guardar minutos de alerta
                     showSuccessBanner('Tarea actualizada exitosamente.');
                 }
             } else {
