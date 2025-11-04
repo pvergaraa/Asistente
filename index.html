@@ -309,6 +309,8 @@
 			</div>
 		</div>
 		
+		<p id="recordingTimer" style="display: none;">⏱️ Tiempo de grabación: 0 segundos</p>
+		
 		<p id="statusMessage" style="color: blue;">Esperando inicio de sesión...</p>
 		
 		<div style="margin-bottom: 15px; display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
@@ -423,6 +425,10 @@
 	
 	// Variables del Time Tracker
 	let timerUpdateInterval; // El intervalo que se ejecuta cada segundo para actualizar el tiempo en pantalla
+	
+	// Variables del Dictado de Voz (Restauradas)
+	let recordingInterval; 
+	let recordingSeconds = 0;
 	
 	// ----------------------------------------------------------------------
 	// 💻 ELEMENTOS DOM 💻
@@ -665,7 +671,14 @@
 		recognition.onstart = function() {
 			statusMessage.style.color = '#1976d2'; // Azul
 			statusMessage.innerText = '🎙️ Escuchando... Di tu tarea.';
-			// Lógica del contador de tiempo ELIMINADA.
+			
+			// Lógica del contador de tiempo (Mantenida, pero oculta)
+			document.getElementById('recordingTimer').innerText = "🎙️ Escuchando...";
+			recordingSeconds = 0; // Reiniciar contador
+			recordingInterval = setInterval(() => {
+				recordingSeconds++;
+				document.getElementById('recordingTimer').innerText = `🎙️ Grabando: ${recordingSeconds} segundos`;
+			}, 1000); // Actualiza cada segundo
 		};
 		
 		recognition.onresult = function(event) {
@@ -673,17 +686,25 @@
 			document.getElementById('taskInput').value = transcript;
 			statusMessage.style.color = 'green';
 			statusMessage.innerText = '✅ Dictado finalizado. Texto listo para agregar.';
-			// Lógica de limpieza del contador ELIMINADA.
+			
+			// Lógica del contador de tiempo (Mantenida, pero oculta)
+			clearInterval(recordingInterval);
+			document.getElementById('recordingTimer').innerText = `⏱️ Texto recibido (${recordingSeconds} segundos)`;
 		};
 		
 		recognition.onerror = function(event) {	
-			// Lógica de limpieza y error del contador ELIMINADA.
+			// Lógica del contador de tiempo (Mantenida, pero oculta)
+			clearInterval(recordingInterval);	
+			document.getElementById('recordingTimer').innerText = `❌ Error en el dictado: ${event.error}`;
+			
 			statusMessage.style.color = 'red';
 			statusMessage.innerText = `❌ Error en el dictado: ${event.error}`;
 		};
 		
 		recognition.onend = function() {	
-			// Lógica de finalización del contador ELIMINADA.
+			// Lógica del contador de tiempo (Mantenida, pero oculta)
+			clearInterval(recordingInterval);	
+			document.getElementById('recordingTimer').innerText = `⏱️ Dictado finalizado. ${recordingSeconds} segundos`;
 		};
 		
 		try {
