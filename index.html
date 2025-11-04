@@ -1492,8 +1492,12 @@
     // ----------------------------------------------------------------------
     // 🔍 FUNCIONES DE BÚSQUEDA 🔍
     // ----------------------------------------------------------------------
+
+
+
+
     
-    function searchItems() {
+function searchItems() {
         const query = document.getElementById('searchInput').value.toLowerCase();
         const results = document.getElementById('searchResults');
         results.innerHTML = '';
@@ -1503,7 +1507,11 @@
             return;
         }
 
-        const foundTasks = tasks.filter(t => 
+        // 1. COMBINAR TAREAS ACTIVAS Y TAREAS DE RESPALDO
+        const allTasks = [...tasks, ...completedTasksBackup];
+
+        // 2. FILTRAR TODAS LAS TAREAS COMBINADAS
+        const foundTasks = allTasks.filter(t => 
             t.text.toLowerCase().includes(query) || 
             (t.tag && t.tag.toLowerCase().includes(query))
         );
@@ -1513,9 +1521,29 @@
                 const li = document.createElement('li');
                 const displayDate = formatDateToDisplay(t.date);
                 const timeInfo = t.elapsedTime ? ` - Tiempo: ${formatTime(t.elapsedTime)}` : '';
+
+                // Determinar si la tarea viene del respaldo (está en el backup pero no en la principal)
+                const isBackupTask = !tasks.some(task => task.id === t.id) && completedTasksBackup.some(task => task.id === t.id);
+
+                let statusLabel = '';
+                let className = '';
+
+                if (isBackupTask) {
+                    // Si viene del respaldo (fue "eliminada")
+                    statusLabel = '[RESPALDADA]';
+                    className = 'completed'; // Usamos la clase completed para mantener el tachado (estilo)
+                } else if (t.done) {
+                    // Si está activa y completada
+                    statusLabel = '[COMPLETADA]';
+                    className = 'completed';
+                } else {
+                    // Si está activa y pendiente
+                    statusLabel = '[ACTIVA]';
+                    className = '';
+                }
                 
-                li.innerText = `TAREA: ${t.text} (${t.tag || 'Sin etiqueta'}) - ${displayDate}${timeInfo}`;
-                li.className = t.done ? 'completed' : '';
+                li.innerText = `${statusLabel} TAREA: ${t.text} (${t.tag || 'Sin etiqueta'}) - ${displayDate}${timeInfo}`;
+                li.className = className;
                 results.appendChild(li);
             });
         } else {
