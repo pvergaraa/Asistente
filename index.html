@@ -99,7 +99,7 @@
         font-weight: bold;
     }
 
-    /* Estilos para Etiqueta y Fecha lado a lado*/
+    /* Estilos para Etiqueta, Fecha y HORA lado a lado (MODIFICADO) */
     .task-inputs-row {
         display: flex; 
         gap: 10px;  
@@ -107,8 +107,9 @@
     }
 
     .task-inputs-row select,
-    .task-inputs-row input[type="date"] {
-        width: 50%; 
+    .task-inputs-row input[type="date"],
+    .task-inputs-row input[type="time"] { /* MODIFICADO */
+        width: 33%; /* Dividimos el espacio entre 3 elementos */
         margin: 0;  
     }
 
@@ -181,13 +182,14 @@
             font-size: 1.5em;
         }
 
-        /* 2. TAREAS Y CONTROLES */
+        /* 2. TAREAS Y CONTROLES (MODIFICADO para 3 campos) */
         .task-inputs-row {
-            flex-direction: column; /* Apila Etiqueta y Fecha */
+            flex-direction: column; /* Apila Etiqueta, Fecha y HORA */
             gap: 0;
         }
         .task-inputs-row select,
-        .task-inputs-row input[type="date"] {
+        .task-inputs-row input[type="date"],
+        .task-inputs-row input[type="time"] { /* MODIFICADO */
             width: 100%; /* Ocupan todo el ancho */
             margin-bottom: 5px;
         }
@@ -299,21 +301,21 @@
                     <option value="Pendiente">Pendiente</option>
                 </select>
                 <input id="taskDate" type="date"/> 
+                <input id="taskTime" type="time" title="Hora para el recordatorio (Opcional)"/> 
             </div>
-
-<div class="task-buttons">
+            
+            <div class="task-buttons">
                 <div style="display: flex; gap: 10px; flex-wrap: wrap;">
                     <button id="addTaskBtn" onclick="addTask()">Agregar tarea</button>
                     <button onclick="startDictation()">🎙️ Comenzar dictado</button>
-                    <button id="deleteBtn" style="background:#d32f2f" onclick="deleteCompletedTasks()">🗑️ Borrar completadas</button> 
                 </div>
 
                 <div style="display: flex; gap: 10px; flex-wrap: wrap;">
-                    <button onclick="exportTasks()">Exportar a PDF</button>
+                    <button onclick="exportTasks()">Exportar tareas</button>
                     <button onclick="openBackupWindow()" style="background:#ff9800">📂 Respaldo completadas</button> 
+                    <button id="deleteBtn" style="background:#d32f2f" onclick="deleteCompletedTasks()">🗑️ Borrar completadas</button> 
                 </div>
             </div>
-
             
             <p id="recordingTimer" style="margin-top: 10px; text-align: right; display: none;">⏱️ Tiempo de grabación: 0 segundos</p>
             
@@ -437,6 +439,8 @@
     let tasks = []; // Tareas activas
     let completedTasksBackup = []; // Tareas de respaldo
     let timerUpdateInterval;
+    let notificationInterval; // <-- NUEVA VARIABLE: Intervalo para el chequeo de alertas de hora
+    const ALERT_MINUTES = 15; // <-- TIEMPO DE ALERTA PREVIA (en minutos)
     let currentCalendarDate = new Date(); 
     let editingTaskId = null; 
     let currentTagFilter = null; // Filtro de etiqueta actual (null = todas)
@@ -548,6 +552,7 @@
             authMessage.innerText = '';
             loadDataFromCloud(); // Cargar Tareas y Respaldo
             startTimerInterval(); 
+            startNotificationChecker(); // <-- INICIA EL CHEQUEO DE ALERTAS DE HORA
         } else {
             loginSection.style.display = 'block'; 
             mainContent.style.display = 'none';
@@ -555,6 +560,9 @@
             completedTasksBackup = [];
             if (timerUpdateInterval) { 
                 clearInterval(timerUpdateInterval); 
+            }
+            if (notificationInterval) { // <-- DETENER EL CHEQUEO DE ALERTAS
+                clearInterval(notificationInterval);
             }
             renderTasks();
             renderCalendar();
@@ -624,7 +632,7 @@
     }
     
     // ----------------------------------------------------------------------
-    // 📊 FUNCIONES DE ESTADÍSTICAS (Paso 3.2) 📊
+    // 📊 FUNCIONES DE ESTADÍSTICAS 📊
     // ----------------------------------------------------------------------
 
     function updateTimeSummary() {
@@ -697,7 +705,90 @@
     }
 
     // ----------------------------------------------------------------------
-    // 🏷️ FUNCIONES DE FILTRO (Paso 3.1) 🏷️
+    // ⏰ FUNCIONES DE NOTIFICACIONES DE TIEMPO (NUEVO) ⏰
+    // ----------------------------------------------------------------------
+
+    function startNotificationChecker() {
+        if (notificationInterval) {
+            clearInterval(notificationInterval);
+        }
+
+        if (auth.currentUser) {
+            // Se ejecuta cada 60 segundos (1 minuto)
+            notificationInterval = setInterval(checkTimedAlerts, 60000); 
+            // Ejecutar inmediatamente al iniciar
+            checkTimedAlerts(); 
+        }
+    }
+    
+    function checkTimedAlerts() {
+        if (!auth.currentUser || tasks.length === 0) return;
+
+        const now = new Date();
+        const nowMs = now.getTime();
+        
+        // El tiempo de aviso es 15 minutos (900,000 milisegundos)
+        const alertTimeMs = ALERT_MINUTES * 60 * 1000; 
+        
+        tasks.filter(t => !t.done && t.date && t.time).forEach(t => {
+            
+            // 1. Crear el objeto Date completo para la tarea
+            const [year, month, day] = t.date.split('-').map(Number);
+            const [hours, minutes] = t.time.split(':').map(Number);
+            
+            // Usamos un nuevo Date object con la fecha y hora de la tarea
+            const taskDateTime = new Date(year, month - 1, day, hours, minutes); 
+            const taskTimeMs = taskDateTime.getTime();
+            
+            // 2. Calcular la diferencia (en milisegundos)
+            const timeDifference = taskTimeMs - nowMs;
+            
+            // 3. Verificar si está en la ventana de alerta (Ej: 15 minutos)
+            if (timeDifference > 0 && timeDifference <= alertTimeMs) {
+                
+                // Prevenir alertas repetidas si ya se alertó en esta misma ventana (menos de 5 minutos)
+                if (t.lastAlertTime && (nowMs - t.lastAlertTime < 300000)) { 
+                    return; 
+                }
+                
+                // 4. Mostrar la alerta visual y de notificación
+                showTimeAlert(t, timeDifference);
+                
+                // 5. Marcar la tarea como alertada temporalmente (no se guarda en Firebase, es solo para el runtime)
+                t.lastAlertTime = nowMs; 
+            }
+        });
+    }
+
+    // Muestra la alerta visual y usa la API de Notificaciones del navegador
+    function showTimeAlert(task, timeDifference) {
+        const minutesLeft = Math.ceil(timeDifference / 60000); // Redondear hacia arriba
+        const alertMsg = `¡ALERTA! La tarea: "${task.text}" (${task.time}) debe iniciar en ${minutesLeft} minutos.`;
+        
+        // 1. Alerta temporal en el status
+        statusMessage.style.color = 'red';
+        statusMessage.innerText = alertMsg;
+        setTimeout(() => {
+            statusMessage.style.color = 'blue';
+            statusMessage.innerText = "Cargado desde la nube."; 
+        }, 15000); // Mantener el aviso 15 segundos
+
+        // 2. (Opcional) Notificación del navegador
+        if (window.Notification) {
+            Notification.requestPermission().then(permission => {
+                if (permission === 'granted') {
+                    new Notification('⏰ ¡RECORDATORIO URGENTE!', {
+                        body: alertMsg,
+                        icon: 'https://cdn-icons-png.flaticon.com/512/3205/3205691.png' // Icono de alarma
+                    });
+                }
+            });
+        }
+    }
+
+
+    // ----------------------------------------------------------------------
+    // 🏷️ FUNCIONES DE FILTRO 🏷️
     // ----------------------------------------------------------------------
 
     function filterTasks(tag) {
@@ -723,7 +814,7 @@
     }
 
     // ----------------------------------------------------------------------
-    // 🗂️ FUNCIONES DE ORDENACIÓN (Paso 4.1) 🗂️
+    // 🗂️ FUNCIONES DE ORDENACIÓN 🗂️
     // ----------------------------------------------------------------------
 
     // Define un mapa de prioridad para las etiquetas
@@ -780,14 +871,16 @@
     // ✏️ FUNCIONES DE EDICIÓN Y GESTIÓN DE TAREAS ✏️
     // ----------------------------------------------------------------------
     
-    // NUEVA FUNCIÓN: Restablece el formulario y el modo de edición
+    // MODIFICADO: Incluye limpieza de taskTime
     function resetTaskForm() {
         const taskInput = document.getElementById('taskInput');
         const taskTag = document.getElementById('taskTag');
+        const taskTime = document.getElementById('taskTime'); // <-- NUEVA LÍNEA
         const addTaskBtn = document.getElementById('addTaskBtn');
         
         taskInput.value = '';
         taskTag.value = ''; // Limpiar etiqueta
+        taskTime.value = ''; // <-- Limpiar hora
         initializeDateInput(); // Restablecer fecha a la de hoy
         
         editingTaskId = null;
@@ -799,6 +892,7 @@
         const taskInput = document.getElementById('taskInput');
         const taskTag = document.getElementById('taskTag');
         const taskDate = document.getElementById('taskDate');
+        const taskTime = document.getElementById('taskTime'); // <-- NUEVA LÍNEA
         const addTaskBtn = document.getElementById('addTaskBtn');
 
         const taskToEdit = tasks.find(t => t.id === taskId);
@@ -812,6 +906,7 @@
         taskInput.value = taskToEdit.text;
         taskTag.value = taskToEdit.tag || '';
         taskDate.value = taskToEdit.date;
+        taskTime.value = taskToEdit.time || ''; // <-- Cargar hora
         
         // 2. Preparar el sistema para la edición
         editingTaskId = taskId;
@@ -821,14 +916,16 @@
         window.scrollTo({ top: 0, behavior: 'smooth' });
     }
 
-    // MODIFICADO: Maneja la adición y la edición
+    // MODIFICADO: Maneja la adición y la edición (Añadido 'time')
     function addTask(text = null) {
         const taskInput = document.getElementById('taskInput');
         const taskDateInput = document.getElementById('taskDate'); 
+        const taskTimeInput = document.getElementById('taskTime'); // <-- NUEVA LÍNEA
         
         const taskText = text || taskInput.value;
         const tag = document.getElementById('taskTag').value;
         const date = taskDateInput.value; 
+        const time = taskTimeInput.value; // <-- NUEVA LÍNEA
         
         if (taskText.trim()) {
             
@@ -839,15 +936,17 @@
                     tasks[taskIndex].text = taskText.trim();
                     tasks[taskIndex].tag = tag;
                     tasks[taskIndex].date = date; 
+                    tasks[taskIndex].time = time; // <-- Guardar hora
                     showSuccessBanner('Tarea actualizada exitosamente.');
                 }
             } else {
                 // 2. MODO CREACIÓN (Crear nueva tarea)
                 tasks.push({ 
-                    id: generateId(), // **Añadido ID**
+                    id: generateId(), 
                     text: taskText.trim(), 
                     tag, 
                     date, 
+                    time, // <-- Guardar hora
                     done: false,
                     startTime: null,      
                     elapsedTime: 0      
@@ -896,7 +995,7 @@
         checkUpcomingTasks();
     }
     
-// MODIFICADO: Mueve la tarea a la lista de respaldo en lugar de eliminarla permanentemente
+    // MODIFICADO: Mueve la tarea a la lista de respaldo en lugar de eliminarla permanentemente
     function deleteTask(taskId) {
         if (!auth.currentUser) return;
 
@@ -982,7 +1081,7 @@
         let pendingTasks = tasksToRender.filter(t => !t.done);
         let completedTasks = tasksToRender.filter(t => t.done);
         
-        // Obtener el tipo de ordenación seleccionado (Paso 4.1)
+        // Obtener el tipo de ordenación seleccionado
         const sortType = document.getElementById('sortSelector').value;
         
         // Aplicar ordenación dinámica a las tareas pendientes
@@ -1000,7 +1099,7 @@
             const li = document.createElement('li');
             
             // ----------------------------------------------------
-            // LÓGICA DE CLASES (1.1, 1.2)
+            // LÓGICA DE CLASES
             // ----------------------------------------------------
             let classList = task.done ? 'completed' : '';
             // Si no está completada y tiene el cronómetro corriendo, añade la clase de animación
@@ -1018,6 +1117,7 @@
             }
 
             const displayDate = formatDateToDisplay(task.date);
+            const displayTime = task.time ? ` @ ${task.time}` : ''; // <-- Display de la hora
 
             // ----------------------------------------------------
             // ⏱️ LÓGICA DE TIEMPO Y BOTÓN
@@ -1080,7 +1180,7 @@
             li.innerHTML = `
                 <div style="display: flex; justify-content: space-between; align-items: center;">
                     <span onclick="toggleTask('${taskId}')" style="flex-grow: 1;"> 
-                        ${taskNumber}. ${task.text} (${styledTag}) - ${displayDate}
+                        ${taskNumber}. ${task.text} (${styledTag}) - ${displayDate}${displayTime}
                         ${timerDisplay}
                     </span>
                     <div style="display: flex; gap: 5px;">
@@ -1097,7 +1197,6 @@
         const allTotal = tasks.length;
         document.getElementById('taskStats').innerText = `Completadas: ${allCompleted} / Pendientes: ${allTotal - allCompleted} (Mostrando: ${totalTasksRendered} tareas)`;
         
-        // **NUEVA LÍNEA:**
         updateTimeSummary();
     }
     
@@ -1129,7 +1228,8 @@
             const status = t.done ? '[COMPLETADA]' : '[PENDIENTE]';
             const tag = t.tag ? ` | Etiqueta: ${t.tag}` : '';
             const displayDate = formatDateToDisplay(t.date);
-            const date = t.date ? ` | Fecha: ${displayDate}` : '';
+            const displayTime = t.time ? ` @ ${t.time}` : ''; // <-- Display de la hora
+            const date = t.date ? ` | Fecha: ${displayDate}${displayTime}` : '';
             
             const color = t.done ? [128, 128, 128] : [0, 0, 0]; 
             doc.setTextColor(...color);
@@ -1173,7 +1273,7 @@
         
         recognition.onresult = function(event) {
             const transcript = event.results[0][0].transcript;
-            addTask("TAREA DICTADA: " + transcript); 
+            addTask("🗣️ TAREA DICTADA: " + transcript); 
         };
         
         recognition.onerror = function(event) { 
@@ -1234,6 +1334,7 @@
                 text: taskToRestore.text, 
                 tag: taskToRestore.tag, 
                 date: taskToRestore.date, 
+                time: taskToRestore.time || '', // <-- Restaurar hora si existe
                 done: false,
                 startTime: null,
                 elapsedTime: 0
@@ -1279,6 +1380,7 @@
                     .restore-btn:hover { opacity: 0.9; }
                     .deleted-date { font-size: 0.8em; color: #777; margin-top: 5px; }
                     .time-tracker-info { font-size: 0.8em; color: #007bff; margin-top: 5px; }
+                    .time-info { font-size: 0.8em; color: #8844aa; } /* Estilo para la hora */
                 </style>
             </head>
             <body>
@@ -1295,6 +1397,8 @@
                 const deletedDate = task.deletedDate ? formatDateToDisplay(task.deletedDate) : 'N/A';
                 const timeTrackerInfo = task.elapsedTime ? 
                     `<div class="time-tracker-info">Tiempo trabajado: ${formatTime(task.elapsedTime)}</div>` : '';
+                const taskTimeInfo = task.time ? 
+                    `<div class="time-info">Hora de Recordatorio: ${task.time}</div>` : ''; // <-- Display de la hora
                 
                 // IMPORTANTE: Se usa un ID numérico o de cadena, lo trataremos como string en el JS.
                 backupWindow.document.write(`
@@ -1302,6 +1406,7 @@
                         <div>
                             <strong>${task.text}</strong> (${task.tag || 'Sin etiqueta'}) 
                             <br/>Fecha original: ${displayDate}
+                            ${taskTimeInfo}
                             <div class="deleted-date">Borrada: ${deletedDate}</div>
                             ${timeTrackerInfo}
                         </div>
@@ -1355,7 +1460,8 @@
             
             const summaryTasks = [...todayTasks, ...tomorrowTasks].map(t => {
                 const dateLabel = t.date === todayInternalDateStr ? '(HOY)' : '(MAÑANA)';
-                return `- ${t.text} (${t.tag || 'Sin etiqueta'}) ${dateLabel}`;
+                const timeLabel = t.time ? ` @ ${t.time}` : ''; // <-- Display de la hora
+                return `- ${t.text} (${t.tag || 'Sin etiqueta'})${timeLabel} ${dateLabel}`;
             });
             listContent = summaryTasks.join('\n');
             
@@ -1383,7 +1489,7 @@
     }
 
     // ************************************************************
-    // *** FUNCIÓN RENDER CALENDAR CORREGIDA ***
+    // *** FUNCIÓN RENDER CALENDAR ***
     // ************************************************************
     function renderCalendar() {
         const targetDate = currentCalendarDate; 
@@ -1470,7 +1576,7 @@
                 const isBackupTask = !tasks.some(task => task.id === t.id) && completedTasksBackup.some(task => task.id === t.id);
                 
                 // 2. La tarea se considera 'hecha' si:
-                //    a) Está en la lista principal y tiene 'done: true'. (El caso de que se revierte a pendiente: t.done es false)
+                //    a) Está en la lista principal y tiene 'done: true'. 
                 //    b) Es una tarea de respaldo (isBackupTask es true).
                 const isDone = t.done || isBackupTask; 
                 
@@ -1490,14 +1596,10 @@
 
 
     // ----------------------------------------------------------------------
-    // 🔍 FUNCIONES DE BÚSQUEDA 🔍
+    // 🔍 FUNCIONES DE BÚSQUEDA (MODIFICADO para incluir Respaldo) 🔍
     // ----------------------------------------------------------------------
-
-
-
-
     
-function searchItems() {
+    function searchItems() {
         const query = document.getElementById('searchInput').value.toLowerCase();
         const results = document.getElementById('searchResults');
         results.innerHTML = '';
@@ -1521,6 +1623,7 @@ function searchItems() {
                 const li = document.createElement('li');
                 const displayDate = formatDateToDisplay(t.date);
                 const timeInfo = t.elapsedTime ? ` - Tiempo: ${formatTime(t.elapsedTime)}` : '';
+                const displayTime = t.time ? ` @ ${t.time}` : '';
 
                 // Determinar si la tarea viene del respaldo (está en el backup pero no en la principal)
                 const isBackupTask = !tasks.some(task => task.id === t.id) && completedTasksBackup.some(task => task.id === t.id);
@@ -1542,7 +1645,7 @@ function searchItems() {
                     className = '';
                 }
                 
-                li.innerText = `${statusLabel} TAREA: ${t.text} (${t.tag || 'Sin etiqueta'}) - ${displayDate}${timeInfo}`;
+                li.innerText = `${statusLabel} TAREA: ${t.text} (${t.tag || 'Sin etiqueta'}) - ${displayDate}${displayTime}${timeInfo}`;
                 li.className = className;
                 results.appendChild(li);
             });
