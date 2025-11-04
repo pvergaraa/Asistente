@@ -388,11 +388,19 @@
 
 <script>
 	// ----------------------------------------------------------------------
-	// ⚙️ CONFIGURACIÓN DE FIREBASE ⚙️
+	// ⚠️ ⚙️ CONFIGURACIÓN DE FIREBASE (¡IMPORTANTE!) ⚙️ ⚠️
 	// ----------------------------------------------------------------------
-	// INSERTA AQUÍ TUS PROPIAS CREDENCIALES
+	// DEBES REEMPLAZAR LA CONFIGURACIÓN DE ABAJO CON TUS CREDENCIALES REALES.
+	// Si no lo haces, la aplicación NO SE CONECTARÁ.
 	const firebaseConfig = {
-		// ... [Tus credenciales de Firebase]
+		// [TUS CREDENCIALES DE FIREBASE AQUÍ]
+		// Ejemplo (BORRA ESTO Y USA TUS DATOS):
+		// apiKey: "AIzaSyB_...",
+		// authDomain: "tu-proyecto.firebaseapp.com",
+		// projectId: "tu-proyecto-id",
+		// storageBucket: "tu-proyecto-id.appspot.com",
+		// messagingSenderId: "...",
+		// appId: "..."
 	};
 
 	// Inicializar Firebase
@@ -639,12 +647,6 @@
 	// 💬 FUNCIONES DEL DICTADO DE VOZ 💬
 	// ----------------------------------------------------------------------
 
-	// --- INICIO DE CÓDIGO ELIMINADO ---
-	// Se eliminan las variables de control del contador de grabación.
-	// let recordingInterval;
-	// let recordingSeconds = 0;
-	// --- FIN DE CÓDIGO ELIMINADO ---
-	
 	function startDictation() {
 		// Verificar soporte
 		if (!('webkitSpeechRecognition' in window)) {
@@ -663,16 +665,7 @@
 		recognition.onstart = function() {
 			statusMessage.style.color = '#1976d2'; // Azul
 			statusMessage.innerText = '🎙️ Escuchando... Di tu tarea.';
-			
-			// --- INICIO DE CÓDIGO ELIMINADO ---
-			// Se elimina la lógica de inicio del contador de grabación.
-			// document.getElementById('recordingTimer').innerText = "🎙️ Escuchando...";
-			// recordingSeconds = 0; // Reiniciar contador
-			// recordingInterval = setInterval(() => {
-			// 	recordingSeconds++;
-			// 	document.getElementById('recordingTimer').innerText = `🎙️ Grabando: ${recordingSeconds} segundos`;
-			// }, 1000); // Actualiza cada segundo
-			// --- FIN DE CÓDIGO ELIMINADO ---
+			// Lógica del contador eliminada aquí.
 		};
 		
 		recognition.onresult = function(event) {
@@ -680,30 +673,17 @@
 			document.getElementById('taskInput').value = transcript;
 			statusMessage.style.color = 'green';
 			statusMessage.innerText = '✅ Dictado finalizado. Texto listo para agregar.';
-			
-			// --- INICIO DE CÓDIGO ELIMINADO ---
-			// Se elimina la lógica de finalización del contador al obtener el resultado.
-			// clearInterval(recordingInterval);
-			// document.getElementById('recordingTimer').innerText = `⏱️ Texto recibido (${recordingSeconds} segundos)`;
-			// --- FIN DE CÓDIGO ELIMINADO ---
+			// Lógica del contador eliminada aquí.
 		};
 		
 		recognition.onerror = function(event) {	
-			// --- INICIO DE CÓDIGO ELIMINADO ---
-			// Se elimina la lógica de error y limpieza del contador.
-			// clearInterval(recordingInterval);	
-			// document.getElementById('recordingTimer').innerText = `❌ Error en el dictado: ${event.error}`;
-			// --- FIN DE CÓDIGO ELIMINADO ---
+			// Lógica del contador eliminada aquí.
 			statusMessage.style.color = 'red';
 			statusMessage.innerText = `❌ Error en el dictado: ${event.error}`;
 		};
 		
 		recognition.onend = function() {	
-			// --- INICIO DE CÓDIGO ELIMINADO ---
-			// Se elimina la lógica de finalización natural y actualización del contador.
-			// clearInterval(recordingInterval);	
-			// document.getElementById('recordingTimer').innerText = `⏱️ Dictado finalizado. ${recordingSeconds} segundos`;
-			// --- FIN DE CÓDIGO ELIMINADO ---
+			// Lógica del contador eliminada aquí.
 		};
 		
 		try {
@@ -719,10 +699,655 @@
 	// ⚙️ FUNCIONES DE MANEJO DE TAREAS (CRUD) ⚙️
 	// ----------------------------------------------------------------------
 	
-	// ... (el resto de las funciones como `addTask`, `clearForm`, `editTask`, `deleteTask`, `toggleComplete`, `renderTasks`, `filterTasks`, `clearAllCompletedTasks`, `generatePDFReport`, `renderHistory`, `cleanUpCompletedTasksBackup` permanecen sin cambios)
+	/**
+	 * Agrega una nueva tarea.
+	 */
+	function addTask() {
+		const taskInput = document.getElementById('taskInput');
+		const taskText = taskInput.value.trim();
+		const taskTag = document.getElementById('taskTag').value;
+		const taskDate = document.getElementById('taskDate').value;
+
+		if (taskText === '') {
+			statusMessage.style.color = 'red';
+			statusMessage.innerText = '❌ Por favor, escribe una tarea.';
+			return;
+		}
+
+		const newTask = {
+			id: editingTaskId || Date.now().toString(), // Usa el ID de edición si existe
+			text: taskText,
+			completed: false,
+			date: taskDate,
+			tag: taskTag,
+			createdAt: Date.now(),
+			elapsedTime: 0, // Nuevo campo para el seguimiento de tiempo
+			startTime: null // Nuevo campo para la hora de inicio del cronómetro
+		};
+
+		if (editingTaskId) {
+			// Modo edición
+			const index = tasks.findIndex(t => t.id === editingTaskId);
+			if (index !== -1) {
+				// Mantiene completed, elapsedTime y startTime
+				newTask.completed = tasks[index].completed; 
+				newTask.elapsedTime = tasks[index].elapsedTime; 
+				newTask.startTime = tasks[index].startTime; 
+				tasks[index] = newTask;
+			}
+			editingTaskId = null;
+			document.getElementById('addTaskBtn').innerText = '➕ Agregar tarea';
+			statusMessage.style.color = 'green';
+			statusMessage.innerText = '✅ Tarea editada correctamente.';
+		} else {
+			// Modo nueva tarea
+			tasks.push(newTask);
+			statusMessage.style.color = 'green';
+			statusMessage.innerText = '✅ Tarea agregada correctamente.';
+		}
+		
+		clearForm(false); // Limpia solo el formulario, no la fecha
+		saveData();
+		renderTasks();
+		renderCalendar();
+	}
 	
-	// CÓDIGO OMITIDO POR BREVEDAD, PERO PERMANECE EN TU ARCHIVO
-	// ...
+	/**
+	 * Limpia los campos del formulario.
+	 * @param {boolean} clearDate Si es true, limpia también la fecha (default: false).
+	 */
+	function clearForm(clearDate = false) {
+		document.getElementById('taskInput').value = '';
+		document.getElementById('taskTag').value = '';
+		if (clearDate) {
+			// Reinicia la fecha al valor por defecto
+			initializeDateInput(); 
+		}
+		editingTaskId = null;
+		document.getElementById('addTaskBtn').innerText = '➕ Agregar tarea';
+		statusMessage.style.color = 'blue';
+		statusMessage.innerText = 'Esperando inicio de sesión...';
+	}
+	
+	/**
+	 * Carga una tarea en el formulario para editarla.
+	 * @param {string} taskId El ID de la tarea a editar.
+	 */
+	function editTask(taskId) {
+		const task = tasks.find(t => t.id === taskId);
+		if (!task) return;
+
+		document.getElementById('taskInput').value = task.text;
+		document.getElementById('taskTag').value = task.tag;
+		document.getElementById('taskDate').value = task.date;
+		
+		editingTaskId = taskId;
+		document.getElementById('addTaskBtn').innerText = '💾 Guardar edición';
+		statusMessage.style.color = 'orange';
+		statusMessage.innerText = `✏️ Editando tarea: ${task.text.substring(0, 30)}...`;
+	}
+
+	/**
+	 * Elimina una tarea.
+	 * @param {string} taskId El ID de la tarea a eliminar.
+	 */
+	function deleteTask(taskId) {
+		if (confirm('¿Estás seguro de que quieres eliminar esta tarea?')) {
+			tasks = tasks.filter(t => t.id !== taskId);
+			saveData();
+			renderTasks();
+			renderCalendar();
+			statusMessage.style.color = 'red';
+			statusMessage.innerText = '🗑️ Tarea eliminada.';
+			
+			// Si la tarea eliminada estaba en edición, limpiar el formulario
+			if (editingTaskId === taskId) {
+				clearForm();
+			}
+		}
+	}
+	
+	/**
+	 * Marca una tarea como completada o incompleta.
+	 * @param {string} taskId El ID de la tarea a modificar.
+	 */
+	function toggleComplete(taskId) {
+		const task = tasks.find(t => t.id === taskId);
+		if (!task) return;
+
+		task.completed = !task.completed;
+		
+		// Lógica del Time Tracker: Si se completa una tarea, detener su cronómetro
+		if (task.completed && task.startTime !== null) {
+			const now = Date.now();
+			const elapsed = now - task.startTime;
+			task.elapsedTime = (task.elapsedTime || 0) + elapsed;
+			task.startTime = null; // Detener
+		}
+
+		// Si se descompleta, no pasa nada con el timer, se mantiene detenido.
+
+		saveData();
+		renderTasks();
+		renderCalendar();
+		renderHistory();
+
+		statusMessage.style.color = 'purple';
+		statusMessage.innerText = task.completed ? '✅ Tarea completada. ¡Bien hecho!' : '🔄 Tarea marcada como pendiente.';
+	}
+	
+	/**
+	 * Filtra la lista de tareas.
+	 * @param {string} filterTag La etiqueta por la que se desea filtrar.
+	 */
+	function filterTasks(filterTag) {
+		currentFilter = filterTag;
+		renderTasks();
+		
+		// Resaltar el botón activo
+		document.querySelectorAll('#filterButtons button').forEach(btn => {
+			btn.style.background = '#1976d2'; // Color por defecto
+		});
+		
+		const activeBtn = document.getElementById(`filter-${filterTag || 'Todos'}`);
+		if (activeBtn) {
+			activeBtn.style.background = '#0d47a1'; // Color de activo
+		}
+	}
+	
+	/**
+	 * Elimina permanentemente todas las tareas que están marcadas como completadas.
+	 */
+	function clearAllCompletedTasks() {
+		if (confirm('¿Estás seguro de que quieres eliminar PERMANENTEMENTE todas las tareas completadas? Esta acción no se puede deshacer.')) {
+			// 1. Respaldar las tareas completadas eliminadas (últimas 5)
+			const completedTasks = tasks.filter(t => t.completed)
+				.sort((a, b) => b.createdAt - a.createdAt); // Ordena por más reciente primero
+
+			const tasksToBackup = completedTasks.slice(0, 5).map(t => ({
+				text: t.text,
+				completedAt: new Date().toLocaleString()
+			}));
+			
+			// Limpia el respaldo antiguo antes de guardar el nuevo
+			cleanUpCompletedTasksBackup(); 
+			localStorage.setItem('completedTasksBackup', JSON.stringify(tasksToBackup));
+			renderHistory();
+
+			// 2. Eliminar de la lista principal
+			tasks = tasks.filter(t => !t.completed);
+			saveData();
+			renderTasks();
+			renderCalendar();
+			statusMessage.style.color = '#e64a19'; // Naranja oscuro
+			statusMessage.innerText = '🗑️ Todas las tareas completadas han sido eliminadas y las últimas 5 respaldadas.';
+		}
+	}
+
+	/**
+	 * Genera un reporte PDF de las tareas pendientes.
+	 */
+	function generatePDFReport() {
+		const { jsPDF } = window.jspdf;
+		const doc = new jsPDF();
+		let y = 10;
+		const lineGap = 7;
+		
+		doc.setFontSize(16);
+		doc.text("Asistente Diario PRO - Reporte de Tareas Pendientes", 10, y);
+		y += lineGap * 2;
+		
+		doc.setFontSize(12);
+		const pendingTasks = tasks.filter(t => !t.completed);
+		
+		if (pendingTasks.length === 0) {
+			doc.text("No hay tareas pendientes.", 10, y);
+		} else {
+			pendingTasks.forEach((task, index) => {
+				const tag = task.tag ? `[${task.tag}] ` : '';
+				const date = task.date ? ` (${formatDateToDisplay(task.date)})` : '';
+				const time = task.elapsedTime ? ` ⏱️ ${formatTime(task.elapsedTime)}` : '';
+				
+				const text = `${index + 1}. ${tag}${task.text}${date}${time}`;
+				
+				// Salto de página si es necesario
+				if (y > 280) { 
+					doc.addPage();
+					y = 10;
+				}
+				
+				doc.text(text, 10, y);
+				y += lineGap;
+			});
+		}
+		
+		doc.save('reporte_tareas_pendientes.pdf');
+		statusMessage.style.color = '#00796b';
+		statusMessage.innerText = '📄 Reporte PDF generado.';
+	}
+
+	// ----------------------------------------------------------------------
+	// 🎨 FUNCIONES DE RENDERIZADO 🎨
+	// ----------------------------------------------------------------------
+
+	/**
+	 * Renderiza la lista de tareas en el DOM.
+	 * @param {boolean} silentUpdate Si es true, solo actualiza la hora (para el cronómetro).
+	 */
+	function renderTasks(silentUpdate = false) {
+		// 1. Aplicar la lógica de ordenación
+		const sortValue = document.getElementById('sortSelector').value;
+		let sortedTasks = [...tasks]; 
+
+		if (sortValue === 'dateAsc') {
+			sortedTasks.sort((a, b) => {
+				if (a.completed !== b.completed) return a.completed ? 1 : -1;
+				if (!a.date) return 1; 
+				if (!b.date) return -1;
+				return new Date(a.date) - new Date(b.date);
+			});
+		} else if (sortValue === 'dateDesc') {
+			sortedTasks.sort((a, b) => {
+				if (a.completed !== b.completed) return a.completed ? 1 : -1;
+				if (!a.date) return 1; 
+				if (!b.date) return -1;
+				return new Date(b.date) - new Date(a.date);
+			});
+		} else if (sortValue === 'tagPriority') {
+			sortedTasks.sort((a, b) => {
+				if (a.completed !== b.completed) return a.completed ? 1 : -1;
+				// Ordena por prioridad (Urgente > Reunión > Personal/Desarrollo/Otro)
+				return TAG_PRIORITY[b.tag || ''] - TAG_PRIORITY[a.tag || '']; 
+			});
+		} else { // default: por fecha de creación descendente
+			sortedTasks.sort((a, b) => {
+				if (a.completed !== b.completed) return a.completed ? 1 : -1;
+				return b.createdAt - a.createdAt;
+			});
+		}
+		
+		// 2. Aplicar el filtro por etiqueta
+		const filteredTasks = sortedTasks.filter(t => 
+			!currentFilter || t.tag === currentFilter
+		);
+
+		const taskList = document.getElementById('taskList');
+		
+		// Si es una actualización silenciosa, solo actualizamos los elementos de tiempo
+		if (silentUpdate) {
+			calculateTotalTime();
+			filteredTasks.forEach(task => {
+				const timeElement = document.getElementById(`time-${task.id}`);
+				if (timeElement) {
+					let totalMs = task.elapsedTime || 0;
+					// Si está corriendo, sumar el tiempo desde el inicio
+					if (task.startTime) {
+						totalMs += (Date.now() - task.startTime);
+					}
+					timeElement.innerText = `⏱️ ${formatTime(totalMs)}`;
+				}
+			});
+			return; // Finalizar la función para la actualización silenciosa
+		}
+
+
+		// 3. Renderizado completo
+		taskList.innerHTML = '';
+		const todayStr = getTodayDateStrForInput();
+		let completedTodayCount = 0;
+		const tasksForBanner = [];
+
+		filteredTasks.forEach(task => {
+			if (task.completed) {
+				const completedDateStr = new Date(task.createdAt).toISOString().split('T')[0];
+				if (completedDateStr === todayStr) {
+					completedTodayCount++;
+				}
+			}
+
+			// Lógica para el banner de tareas próximas
+			if (!task.completed && task.date && task.date >= todayStr) {
+				const diffTime = new Date(task.date).getTime() - new Date(todayStr).getTime();
+				const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+				
+				if (diffDays >= 0 && diffDays <= 7) {
+					tasksForBanner.push({
+						text: task.text,
+						date: task.date,
+						days: diffDays,
+						tag: task.tag
+					});
+				}
+			}
+
+			// Crear el elemento LI
+			const li = document.createElement('li');
+			li.className = task.completed ? 'completed' : '';
+			// Si la tarea está corriendo, añade la clase de animación
+			if (task.startTime) {
+				li.classList.add('task-running');
+			}
+			
+			// 3.1 Contenido de la tarea (flexbox)
+			const taskContentDiv = document.createElement('div');
+			taskContentDiv.style.display = 'flex';
+			taskContentDiv.style.justifyContent = 'space-between';
+			taskContentDiv.style.alignItems = 'center';
+
+			// 3.2 Texto, Etiqueta, Fecha y Timer (lado izquierdo)
+			const infoSpan = document.createElement('span');
+			let tagHtml = task.tag ? `<span class="urgent-tag">[${task.tag}]</span> ` : '';
+			let dateHtml = task.date ? `<small style="display: block; color: #555;">Fecha límite: ${formatDateToDisplay(task.date)}</small>` : '';
+			
+			// Calcular y mostrar tiempo
+			let totalMs = task.elapsedTime || 0;
+			if (task.startTime) {
+				totalMs += (Date.now() - task.startTime);
+			}
+			const timeSpan = `<span id="time-${task.id}" style="font-weight: bold; color: #333;">⏱️ ${formatTime(totalMs)}</span>`;
+
+
+			infoSpan.innerHTML = `${tagHtml}${task.text}${dateHtml}${timeSpan}`;
+			infoSpan.onclick = () => toggleComplete(task.id);
+			
+			// 3.3 Botones de acción (lado derecho)
+			const buttonDiv = document.createElement('div');
+			
+			const editBtn = document.createElement('button');
+			editBtn.innerText = '✏️ Editar';
+			editBtn.style.background = '#f9a825';
+			editBtn.onclick = (e) => { e.stopPropagation(); editTask(task.id); }; // Detener propagación
+			
+			const deleteBtn = document.createElement('button');
+			deleteBtn.innerText = '🗑️ Eliminar';
+			deleteBtn.style.background = '#d32f2f';
+			deleteBtn.onclick = (e) => { e.stopPropagation(); deleteTask(task.id); };
+			
+			const timerBtn = document.createElement('button');
+			// Cambia el texto del botón según si está corriendo o no
+			timerBtn.innerText = task.startTime ? '❚❚ Detener' : '▶️ Iniciar'; 
+			timerBtn.style.background = task.startTime ? '#ef6c00' : '#388e3c'; // Naranja/Verde
+			timerBtn.onclick = (e) => { e.stopPropagation(); toggleTimer(task.id); };
+
+
+			// Agrega los botones al div
+			buttonDiv.appendChild(editBtn);
+			buttonDiv.appendChild(timerBtn);
+			buttonDiv.appendChild(deleteBtn);
+			
+			// 3.4 Ensamblar el LI
+			taskContentDiv.appendChild(infoSpan);
+			taskContentDiv.appendChild(buttonDiv);
+			li.appendChild(taskContentDiv);
+			taskList.appendChild(li);
+		});
+
+		// 4. Actualizar estadísticas
+		document.getElementById('completedToday').innerText = completedTodayCount;
+		calculateTotalTime();
+
+		// 5. Renderizar el Banner de Tareas Próximas
+		renderUpcomingTasksBanner(tasksForBanner);
+	}
+	
+	/**
+	 * Renderiza el historial de las últimas 5 tareas completadas del respaldo local.
+	 */
+	function renderHistory() {
+		const historyList = document.getElementById('completedTasksList');
+		historyList.innerHTML = '';
+		
+		const storedBackup = localStorage.getItem('completedTasksBackup');
+		const backupTasks = storedBackup ? JSON.parse(storedBackup) : [];
+		
+		if (backupTasks.length === 0) {
+			historyList.innerHTML = '<li>No hay historial de tareas completadas eliminadas.</li>';
+			return;
+		}
+		
+		backupTasks.forEach(task => {
+			const li = document.createElement('li');
+			li.className = 'completed';
+			li.style.textDecoration = 'none'; // Quitar tachado en el historial para más claridad
+			li.innerHTML = `
+				${task.text}
+				<small style="display: block; color: #888;">Eliminada el: ${task.completedAt}</small>
+			`;
+			historyList.appendChild(li);
+		});
+	}
+
+	/**
+	 * Mantiene solo las últimas 5 tareas en el respaldo local.
+	 */
+	function cleanUpCompletedTasksBackup() {
+		const storedBackup = localStorage.getItem('completedTasksBackup');
+		if (storedBackup) {
+			let backupTasks = JSON.parse(storedBackup);
+			// Asegurar que solo queden las últimas 5
+			if (backupTasks.length > 5) {
+				backupTasks = backupTasks.slice(0, 5);
+				localStorage.setItem('completedTasksBackup', JSON.stringify(backupTasks));
+			}
+		}
+	}
+
+	/**
+	 * Muestra el banner con un resumen de las tareas próximas.
+	 * @param {Array<object>} tasksData Array de tareas próximas.
+	 */
+	function renderUpcomingTasksBanner(tasksData) {
+		const banner = document.getElementById('upcomingTasksBanner');
+		const todayStr = getTodayDateStrForInput();
+		
+		if (tasksData.length === 0) {
+			banner.style.display = 'none';
+			return;
+		}
+
+		tasksData.sort((a, b) => new Date(a.date) - new Date(b.date));
+
+		let summary = '';
+		tasksData.forEach(t => {
+			let dateText;
+			if (t.date === todayStr) {
+				dateText = '¡HOY!';
+			} else if (t.days === 1) {
+				dateText = 'Mañana';
+			} else {
+				dateText = `en ${t.days} días (${formatDateToDisplay(t.date)})`;
+			}
+			
+			summary += `\n- ${t.text} (${t.tag || 'Sin Etiqueta'}) - ${dateText}`;
+		});
+		
+		banner.innerHTML = `
+			<div>
+				🔔 **TAREAS PRÓXIMAS (7 DÍAS)**
+				<pre class="task-list-summary">${summary}</pre>
+			</div>
+			<button onclick="document.getElementById('upcomingTasksBanner').style.display='none'">✖️</button>
+		`;
+		banner.style.display = 'flex';
+	}
+	
+	// ----------------------------------------------------------------------
+	// 🗓️ FUNCIONES DEL CALENDARIO 🗓️
+	// ----------------------------------------------------------------------
+
+	/**
+	 * Renderiza el calendario mensual.
+	 */
+	function renderCalendar() {
+		const year = currentCalendarDate.getFullYear();
+		const month = currentCalendarDate.getMonth();
+		const calendarTitle = document.getElementById('calendarTitle');
+		calendarTitle.innerText = `${currentCalendarDate.toLocaleString('es-ES', { month: 'long', year: 'numeric' })}`;
+		
+		const calendar = document.getElementById('calendar');
+		calendar.innerHTML = ''; // Limpiar
+		
+		// Días de la semana
+		WEEK_DAYS.forEach(day => {
+			const header = document.createElement('div');
+			header.innerText = day;
+			header.style.fontWeight = 'bold';
+			header.style.textAlign = 'center';
+			calendar.appendChild(header);
+		});
+		
+		const firstDayOfMonth = new Date(year, month, 1).getDay(); // 0 (Dom) - 6 (Sáb)
+		const daysInMonth = new Date(year, month + 1, 0).getDate();
+		const today = getTodayDateStrForInput();
+
+		// Rellenar espacios vacíos al inicio
+		for (let i = 0; i < firstDayOfMonth; i++) {
+			calendar.innerHTML += '<div class="day" style="background: none; border: none;"></div>';
+		}
+		
+		// Días del mes
+		for (let day = 1; day <= daysInMonth; day++) {
+			const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+			
+			// Contar tareas para este día
+			const tasksForDay = tasks.filter(t => t.date === dateStr && !t.completed);
+			const completedForDay = tasks.filter(t => t.date === dateStr && t.completed).length;
+			
+			const dayDiv = document.createElement('div');
+			dayDiv.className = 'day';
+			dayDiv.dataset.date = dateStr;
+			dayDiv.onclick = () => document.getElementById('taskDate').value = dateStr; // Rellenar input al hacer clic
+			
+			if (dateStr === today) {
+				dayDiv.classList.add('current-day');
+			}
+			
+			let content = `<strong>${day}</strong>`;
+			
+			if (tasksForDay.length > 0) {
+				const urgentTasks = tasksForDay.filter(t => t.tag === 'Urgente').length;
+				let color = '#333';
+				if (urgentTasks > 0) {
+					color = 'red';
+				} else if (tasksForDay.length > 0) {
+					color = '#1976d2';
+				}
+				
+				content += `<p style="margin: 5px 0 0 0; color: ${color}; font-weight: bold; font-size: 0.8em;">${tasksForDay.length} Tarea(s)</p>`;
+			}
+			
+			if (completedForDay > 0) {
+				content += `<p style="margin: 0; color: green; font-size: 0.7em;">${completedForDay} Compl.</p>`;
+			}
+
+			dayDiv.innerHTML = content;
+			calendar.appendChild(dayDiv);
+		}
+	}
+	
+	/**
+	 * Cambia el mes visualizado en el calendario.
+	 * @param {number} offset 1 para siguiente mes, -1 para mes anterior.
+	 */
+	function changeMonth(offset) {
+		currentCalendarDate.setMonth(currentCalendarDate.getMonth() + offset);
+		renderCalendar();
+	}
+
+
+	// ----------------------------------------------------------------------
+	// 👤 FUNCIONES DE AUTENTICACIÓN 👤
+	// ----------------------------------------------------------------------
+
+	/**
+	 * Inicia sesión con Google.
+	 */
+	function signInWithGoogle() {
+		const provider = new firebase.auth.GoogleAuthProvider();
+		auth.signInWithPopup(provider)
+			.then((result) => {
+				// El observador onAuthStateChanged maneja la actualización de la UI
+			})
+			.catch((error) => {
+				console.error("Error de autenticación de Google:", error);
+				authMessage.style.color = 'red';
+				authMessage.innerText = `❌ Error al iniciar sesión: ${error.message}`;
+			});
+	}
+
+	/**
+	 * Cierra la sesión del usuario.
+	 */
+	function signOutUser() {
+		auth.signOut()
+			.then(() => {
+				// El observador onAuthStateChanged maneja la actualización de la UI
+			})
+			.catch((error) => {
+				console.error("Error al cerrar sesión:", error);
+			});
+	}
+
+	// Observador de estado de autenticación
+	auth.onAuthStateChanged(user => {
+		currentUser = user;
+		if (user) {
+			// Usuario logueado
+			loginSection.style.display = 'none';
+			mainContent.style.display = 'block';
+			document.getElementById('userWelcome').innerText = `Asistente Diario PRO (${user.displayName})`;
+			loadData();
+			startTimerInterval(); // Iniciar el intervalo global
+		} else {
+			// Usuario desconectado
+			currentUser = null;
+			loginSection.style.display = 'block';
+			mainContent.style.display = 'none';
+			authMessage.style.color = 'gray';
+			authMessage.innerText = 'Esperando inicio de sesión...';
+			tasks = [];
+			renderTasks(); // Limpia la lista de tareas
+			
+			// Si el usuario cierra sesión, cargar datos de Local Storage como fallback
+			loadData(); 
+			
+			// Limpiar el intervalo del cronómetro
+			if (timerUpdateInterval) {
+				clearInterval(timerUpdateInterval);
+			}
+		}
+	});
+
+	// ----------------------------------------------------------------------
+	// 🚀 INICIALIZACIÓN 🚀
+	// ----------------------------------------------------------------------
+
+	/**
+	 * Muestra la fecha y hora actualizadas.
+	 */
+	function updateDateTime() {
+		const now = new Date();
+		document.getElementById('fecha-hora').innerText = now.toLocaleString('es-ES', {
+			weekday: 'long', 
+			year: 'numeric', 
+			month: 'long', 
+			day: 'numeric',
+			hour: '2-digit',
+			minute: '2-digit',
+			second: '2-digit'
+		});
+	}
+
+	// Llamadas iniciales
+	initializeDateInput();
+	renderHistory(); // Cargar historial al inicio
+	
+	// Actualizar fecha y hora cada segundo
+	setInterval(updateDateTime, 1000); 
+
+	// La carga de datos y el renderizado se manejan dentro de auth.onAuthStateChanged
+	// para asegurar que se use el UID correcto o el Local Storage.
+	
 </script>
 
 </body>
