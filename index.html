@@ -896,19 +896,38 @@
         checkUpcomingTasks();
     }
     
-    // NUEVA FUNCIÓN: Eliminar una tarea individual por ID
+// MODIFICADO: Mueve la tarea a la lista de respaldo en lugar de eliminarla permanentemente
     function deleteTask(taskId) {
         if (!auth.currentUser) return;
 
-        // Filtrar tareas que NO coinciden con el ID
+        const taskToDelete = tasks.find(t => t.id === taskId);
+
+        if (!taskToDelete) {
+            showSuccessBanner('Error: Tarea no encontrada.');
+            return;
+        }
+
+        // 1. Clonar la tarea y añadir metadatos de eliminación
+        const taskToBackup = {
+            ...taskToDelete,
+            deletedDate: new Date().toISOString().slice(0, 10), // Fecha de "borrado"
+            done: true // Asegurarse de que esté marcada como completada/respaldada
+        };
+        
+        // 2. Agregar a la lista de respaldo
+        completedTasksBackup.push(taskToBackup);
+
+        // 3. Eliminar de la lista principal (tasks)
         tasks = tasks.filter(t => t.id !== taskId);
         
+        // 4. Guardar ambas listas
         saveData(); 
         
+        // 5. Renderizar y confirmar
         renderTasks();
         renderCalendar(); 
         checkUpcomingTasks(); 
-        showSuccessBanner('Tarea eliminada.');
+        showSuccessBanner(`Tarea "${taskToDelete.text}" movida a Respaldo.`);
     }
 
 
