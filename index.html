@@ -300,19 +300,20 @@
                 </select>
                 <input id="taskDate" type="date"/> 
             </div>
-            
-            <div class="task-buttons">
+
+<div class="task-buttons">
+                <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                    <button id="addTaskBtn" onclick="addTask()">Agregar tarea</button>
+                    <button onclick="startDictation()">🎙️ Comenzar dictado</button>
+                </div>
+
                 <div style="display: flex; gap: 10px; flex-wrap: wrap;">
                     <button onclick="exportTasks()">Exportar tareas</button>
                     <button onclick="openBackupWindow()" style="background:#ff9800">📂 Respaldo completadas</button> 
                     <button id="deleteBtn" style="background:#d32f2f" onclick="deleteCompletedTasks()">🗑️ Borrar completadas</button> 
                 </div>
-                
-                <div style="display: flex; gap: 10px; flex-wrap: wrap;">
-                    <button id="addTaskBtn" onclick="addTask()">Agregar tarea</button>
-                    <button onclick="startDictation()">🎙️ Comenzar dictado</button>
-                </div>
             </div>
+
             
             <p id="recordingTimer" style="margin-top: 10px; text-align: right; display: none;">⏱️ Tiempo de grabación: 0 segundos</p>
             
