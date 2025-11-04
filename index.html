@@ -1154,7 +1154,7 @@
         
         recognition.onresult = function(event) {
             const transcript = event.results[0][0].transcript;
-            addTask("🗣️ TAREA DICTADA: " + transcript); 
+            addTask("TAREA DICTADA: " + transcript); 
         };
         
         recognition.onerror = function(event) { 
