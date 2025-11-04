@@ -99,7 +99,7 @@
         font-weight: bold;
     }
 
-    /* Estilos para Etiqueta, Fecha y HORA lado a lado (MODIFICADO) */
+    /* Estilos para Etiqueta, Fecha, HORA y AVISO (MODIFICADO para 4 campos) */
     .task-inputs-row {
         display: flex; 
         gap: 10px;  
@@ -108,8 +108,9 @@
 
     .task-inputs-row select,
     .task-inputs-row input[type="date"],
-    .task-inputs-row input[type="time"] { /* MODIFICADO */
-        width: 33%; /* Dividimos el espacio entre 3 elementos */
+    .task-inputs-row input[type="time"],
+    #alertMinutes { /* NUEVO: #alertMinutes */
+        width: 25%; /* Dividimos el espacio entre 4 elementos */
         margin: 0;  
     }
 
@@ -182,14 +183,15 @@
             font-size: 1.5em;
         }
 
-        /* 2. TAREAS Y CONTROLES (MODIFICADO para 3 campos) */
+        /* 2. TAREAS Y CONTROLES (MODIFICADO para 4 campos) */
         .task-inputs-row {
-            flex-direction: column; /* Apila Etiqueta, Fecha y HORA */
+            flex-direction: column; /* Apila Etiqueta, Fecha, HORA y AVISO */
             gap: 0;
         }
         .task-inputs-row select,
         .task-inputs-row input[type="date"],
-        .task-inputs-row input[type="time"] { /* MODIFICADO */
+        .task-inputs-row input[type="time"],
+        #alertMinutes { /* NUEVO: #alertMinutes */
             width: 100%; /* Ocupan todo el ancho */
             margin-bottom: 5px;
         }
@@ -302,6 +304,14 @@
                 </select>
                 <input id="taskDate" type="date"/> 
                 <input id="taskTime" type="time" title="Hora para el recordatorio (Opcional)"/> 
+                <select id="alertMinutes" title="Minutos de aviso previo a la hora">
+                    <option value="0">Sin Aviso</option>
+                    <option value="5">Avisar 5 min antes</option>
+                    <option value="10">Avisar 10 min antes</option>
+                    <option value="15" selected>Avisar 15 min antes</option>
+                    <option value="30">Avisar 30 min antes</option>
+                    <option value="60">Avisar 1 hora antes</option>
+                </select>
             </div>
             
             <div class="task-buttons">
@@ -439,8 +449,7 @@
     let tasks = []; // Tareas activas
     let completedTasksBackup = []; // Tareas de respaldo
     let timerUpdateInterval;
-    let notificationInterval; // <-- NUEVA VARIABLE: Intervalo para el chequeo de alertas de hora
-    const ALERT_MINUTES = 15; // <-- TIEMPO DE ALERTA PREVIA (en minutos)
+    let notificationInterval; // Intervalo para el chequeo de alertas de hora
     let currentCalendarDate = new Date(); 
     let editingTaskId = null; 
     let currentTagFilter = null; // Filtro de etiqueta actual (null = todas)
@@ -552,7 +561,7 @@
             authMessage.innerText = '';
             loadDataFromCloud(); // Cargar Tareas y Respaldo
             startTimerInterval(); 
-            startNotificationChecker(); // <-- INICIA EL CHEQUEO DE ALERTAS DE HORA
+            startNotificationChecker(); // INICIA EL CHEQUEO DE ALERTAS DE HORA
         } else {
             loginSection.style.display = 'block'; 
             mainContent.style.display = 'none';
@@ -561,7 +570,7 @@
             if (timerUpdateInterval) { 
                 clearInterval(timerUpdateInterval); 
             }
-            if (notificationInterval) { // <-- DETENER EL CHEQUEO DE ALERTAS
+            if (notificationInterval) { // DETENER EL CHEQUEO DE ALERTAS
                 clearInterval(notificationInterval);
             }
             renderTasks();
@@ -705,7 +714,7 @@
     }
 
     // ----------------------------------------------------------------------
-    // ⏰ FUNCIONES DE NOTIFICACIONES DE TIEMPO (NUEVO) ⏰
+    // ⏰ FUNCIONES DE NOTIFICACIONES DE TIEMPO ⏰
     // ----------------------------------------------------------------------
 
     function startNotificationChecker() {
@@ -721,17 +730,22 @@
         }
     }
     
+    // MODIFICADO: Usa el campo 'alertMinutes' de la tarea para el aviso
     function checkTimedAlerts() {
         if (!auth.currentUser || tasks.length === 0) return;
 
         const now = new Date();
         const nowMs = now.getTime();
         
-        // El tiempo de aviso es 15 minutos (900,000 milisegundos)
-        const alertTimeMs = ALERT_MINUTES * 60 * 1000; 
         
-        tasks.filter(t => !t.done && t.date && t.time).forEach(t => {
+        tasks.filter(t => !t.done && t.date && t.time && (t.alertMinutes === undefined || t.alertMinutes > 0)).forEach(t => {
             
+            // Usar 15 minutos por defecto si no está definido, o el valor guardado
+            const minutesToAlert = t.alertMinutes !== undefined ? t.alertMinutes : 15; // <-- MODIFICADO
+            
+            // El tiempo de aviso en milisegundos
+            const alertTimeMs = minutesToAlert * 60 * 1000; // <-- MODIFICADO
+
             // 1. Crear el objeto Date completo para la tarea
             const [year, month, day] = t.date.split('-').map(Number);
             const [hours, minutes] = t.time.split(':').map(Number);
@@ -743,7 +757,7 @@
             // 2. Calcular la diferencia (en milisegundos)
             const timeDifference = taskTimeMs - nowMs;
             
-            // 3. Verificar si está en la ventana de alerta (Ej: 15 minutos)
+            // 3. Verificar si está en la ventana de alerta
             if (timeDifference > 0 && timeDifference <= alertTimeMs) {
                 
                 // Prevenir alertas repetidas si ya se alertó en esta misma ventana (menos de 5 minutos)
@@ -871,28 +885,31 @@
     // ✏️ FUNCIONES DE EDICIÓN Y GESTIÓN DE TAREAS ✏️
     // ----------------------------------------------------------------------
     
-    // MODIFICADO: Incluye limpieza de taskTime
+    // MODIFICADO: Incluye limpieza de taskTime y alertMinutes
     function resetTaskForm() {
         const taskInput = document.getElementById('taskInput');
         const taskTag = document.getElementById('taskTag');
-        const taskTime = document.getElementById('taskTime'); // <-- NUEVA LÍNEA
+        const taskTime = document.getElementById('taskTime'); 
+        const alertMinutes = document.getElementById('alertMinutes'); // <-- NUEVA LÍNEA
         const addTaskBtn = document.getElementById('addTaskBtn');
         
         taskInput.value = '';
         taskTag.value = ''; // Limpiar etiqueta
-        taskTime.value = ''; // <-- Limpiar hora
+        taskTime.value = ''; // Limpiar hora
+        alertMinutes.value = '15'; // <-- Resetear a 15 minutos (por defecto)
         initializeDateInput(); // Restablecer fecha a la de hoy
         
         editingTaskId = null;
         addTaskBtn.textContent = 'Agregar tarea';
     }
 
-    // NUEVA FUNCIÓN: Carga la tarea seleccionada en el formulario
+    // MODIFICADO: Carga taskTime y alertMinutes
     function editTask(taskId) {
         const taskInput = document.getElementById('taskInput');
         const taskTag = document.getElementById('taskTag');
         const taskDate = document.getElementById('taskDate');
-        const taskTime = document.getElementById('taskTime'); // <-- NUEVA LÍNEA
+        const taskTime = document.getElementById('taskTime'); 
+        const alertMinutes = document.getElementById('alertMinutes'); // <-- NUEVA LÍNEA
         const addTaskBtn = document.getElementById('addTaskBtn');
 
         const taskToEdit = tasks.find(t => t.id === taskId);
@@ -906,7 +923,8 @@
         taskInput.value = taskToEdit.text;
         taskTag.value = taskToEdit.tag || '';
         taskDate.value = taskToEdit.date;
-        taskTime.value = taskToEdit.time || ''; // <-- Cargar hora
+        taskTime.value = taskToEdit.time || ''; 
+        alertMinutes.value = taskToEdit.alertMinutes !== undefined ? taskToEdit.alertMinutes.toString() : '15'; // <-- Cargar minutos de alerta
         
         // 2. Preparar el sistema para la edición
         editingTaskId = taskId;
@@ -916,16 +934,18 @@
         window.scrollTo({ top: 0, behavior: 'smooth' });
     }
 
-    // MODIFICADO: Maneja la adición y la edición (Añadido 'time')
+    // MODIFICADO: Maneja la adición y la edición (Añadido 'time' y 'alertMinutes')
     function addTask(text = null) {
         const taskInput = document.getElementById('taskInput');
         const taskDateInput = document.getElementById('taskDate'); 
-        const taskTimeInput = document.getElementById('taskTime'); // <-- NUEVA LÍNEA
+        const taskTimeInput = document.getElementById('taskTime'); 
+        const alertMinutesInput = document.getElementById('alertMinutes'); // <-- NUEVA LÍNEA
         
         const taskText = text || taskInput.value;
         const tag = document.getElementById('taskTag').value;
         const date = taskDateInput.value; 
-        const time = taskTimeInput.value; // <-- NUEVA LÍNEA
+        const time = taskTimeInput.value; 
+        const alertMinutes = parseInt(alertMinutesInput.value, 10); // <-- NUEVA LÍNEA
         
         if (taskText.trim()) {
             
@@ -936,7 +956,8 @@
                     tasks[taskIndex].text = taskText.trim();
                     tasks[taskIndex].tag = tag;
                     tasks[taskIndex].date = date; 
-                    tasks[taskIndex].time = time; // <-- Guardar hora
+                    tasks[taskIndex].time = time; 
+                    tasks[taskIndex].alertMinutes = alertMinutes; // <-- Guardar minutos de alerta
                     showSuccessBanner('Tarea actualizada exitosamente.');
                 }
             } else {
@@ -946,7 +967,8 @@
                     text: taskText.trim(), 
                     tag, 
                     date, 
-                    time, // <-- Guardar hora
+                    time, 
+                    alertMinutes, // <-- Guardar minutos de alerta
                     done: false,
                     startTime: null,      
                     elapsedTime: 0      
@@ -1117,7 +1139,10 @@
             }
 
             const displayDate = formatDateToDisplay(task.date);
-            const displayTime = task.time ? ` @ ${task.time}` : ''; // <-- Display de la hora
+            const displayTime = task.time ? ` @ ${task.time}` : ''; // Display de la hora
+            
+            // Mostrar tiempo de alerta si está configurado
+            const alertMin = task.alertMinutes !== undefined && task.alertMinutes > 0 ? ` [Av. ${task.alertMinutes}m]` : '';
 
             // ----------------------------------------------------
             // ⏱️ LÓGICA DE TIEMPO Y BOTÓN
@@ -1180,7 +1205,7 @@
             li.innerHTML = `
                 <div style="display: flex; justify-content: space-between; align-items: center;">
                     <span onclick="toggleTask('${taskId}')" style="flex-grow: 1;"> 
-                        ${taskNumber}. ${task.text} (${styledTag}) - ${displayDate}${displayTime}
+                        ${taskNumber}. ${task.text} (${styledTag}) - ${displayDate}${displayTime}${alertMin}
                         ${timerDisplay}
                     </span>
                     <div style="display: flex; gap: 5px;">
@@ -1228,9 +1253,10 @@
             const status = t.done ? '[COMPLETADA]' : '[PENDIENTE]';
             const tag = t.tag ? ` | Etiqueta: ${t.tag}` : '';
             const displayDate = formatDateToDisplay(t.date);
-            const displayTime = t.time ? ` @ ${t.time}` : ''; // <-- Display de la hora
-            const date = t.date ? ` | Fecha: ${displayDate}${displayTime}` : '';
-            
+            const displayTime = t.time ? ` @ ${t.time}` : ''; 
+            const alertTime = t.alertMinutes !== undefined && t.alertMinutes > 0 ? ` [Av. ${t.alertMinutes}m]` : '';
+            const date = t.date ? ` | Fecha: ${displayDate}${displayTime}${alertTime}` : '';
+
             const color = t.done ? [128, 128, 128] : [0, 0, 0]; 
             doc.setTextColor(...color);
 
@@ -1334,7 +1360,8 @@
                 text: taskToRestore.text, 
                 tag: taskToRestore.tag, 
                 date: taskToRestore.date, 
-                time: taskToRestore.time || '', // <-- Restaurar hora si existe
+                time: taskToRestore.time || '', // Restaurar hora si existe
+                alertMinutes: taskToRestore.alertMinutes || 15, // Restaurar minutos de alerta
                 done: false,
                 startTime: null,
                 elapsedTime: 0
@@ -1380,7 +1407,7 @@
                     .restore-btn:hover { opacity: 0.9; }
                     .deleted-date { font-size: 0.8em; color: #777; margin-top: 5px; }
                     .time-tracker-info { font-size: 0.8em; color: #007bff; margin-top: 5px; }
-                    .time-info { font-size: 0.8em; color: #8844aa; } /* Estilo para la hora */
+                    .time-info { font-size: 0.8em; color: #8844aa; } 
                 </style>
             </head>
             <body>
@@ -1398,7 +1425,9 @@
                 const timeTrackerInfo = task.elapsedTime ? 
                     `<div class="time-tracker-info">Tiempo trabajado: ${formatTime(task.elapsedTime)}</div>` : '';
                 const taskTimeInfo = task.time ? 
-                    `<div class="time-info">Hora de Recordatorio: ${task.time}</div>` : ''; // <-- Display de la hora
+                    `<div class="time-info">Hora: ${task.time}</div>` : ''; 
+                const alertInfo = task.alertMinutes && task.alertMinutes > 0 ? 
+                    `<div class="time-info">Aviso: ${task.alertMinutes}m antes</div>` : ''; 
                 
                 // IMPORTANTE: Se usa un ID numérico o de cadena, lo trataremos como string en el JS.
                 backupWindow.document.write(`
@@ -1407,6 +1436,7 @@
                             <strong>${task.text}</strong> (${task.tag || 'Sin etiqueta'}) 
                             <br/>Fecha original: ${displayDate}
                             ${taskTimeInfo}
+                            ${alertInfo}
                             <div class="deleted-date">Borrada: ${deletedDate}</div>
                             ${timeTrackerInfo}
                         </div>
@@ -1460,8 +1490,9 @@
             
             const summaryTasks = [...todayTasks, ...tomorrowTasks].map(t => {
                 const dateLabel = t.date === todayInternalDateStr ? '(HOY)' : '(MAÑANA)';
-                const timeLabel = t.time ? ` @ ${t.time}` : ''; // <-- Display de la hora
-                return `- ${t.text} (${t.tag || 'Sin etiqueta'})${timeLabel} ${dateLabel}`;
+                const timeLabel = t.time ? ` @ ${t.time}` : ''; 
+                const alertLabel = t.alertMinutes && t.alertMinutes > 0 ? ` [Av. ${t.alertMinutes}m]` : '';
+                return `- ${t.text} (${t.tag || 'Sin etiqueta'})${timeLabel}${alertLabel} ${dateLabel}`;
             });
             listContent = summaryTasks.join('\n');
             
@@ -1624,6 +1655,7 @@
                 const displayDate = formatDateToDisplay(t.date);
                 const timeInfo = t.elapsedTime ? ` - Tiempo: ${formatTime(t.elapsedTime)}` : '';
                 const displayTime = t.time ? ` @ ${t.time}` : '';
+                const alertInfo = t.alertMinutes && t.alertMinutes > 0 ? ` [Av. ${t.alertMinutes}m]` : '';
 
                 // Determinar si la tarea viene del respaldo (está en el backup pero no en la principal)
                 const isBackupTask = !tasks.some(task => task.id === t.id) && completedTasksBackup.some(task => task.id === t.id);
@@ -1645,7 +1677,7 @@
                     className = '';
                 }
                 
-                li.innerText = `${statusLabel} TAREA: ${t.text} (${t.tag || 'Sin etiqueta'}) - ${displayDate}${displayTime}${timeInfo}`;
+                li.innerText = `${statusLabel} TAREA: ${t.text} (${t.tag || 'Sin etiqueta'}) - ${displayDate}${displayTime}${alertInfo}${timeInfo}`;
                 li.className = className;
                 results.appendChild(li);
             });
