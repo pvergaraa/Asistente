@@ -1,1375 +1,251 @@
-<!DOCTYPE html>
-<html lang="es">
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
+<html>
 <head>
-<meta charset="utf-8"/>
-<title>Asistente Diario PRO - Versión Unificada (Cloud + Funciones Avanzadas)</title>
-<style>
-	/* Diseño Base */
-	body {	
-		font-family: Arial, sans-serif;	
-		margin: 20px auto;	
-		background: #f4f4f4;	
-		max-width: 1200px;	
-		padding: 0 20px;	
-	}
-
-	h1 { color: #333; }
-	.section { margin-bottom: 30px; background: #fff; padding: 20px; border-radius: 8px; }
-	input, textarea, select { margin: 5px 0; padding: 8px; width: 100%; border: 1px solid #ccc; border-radius: 4px; }
-	
-	/* === ESTILOS PARA EL ENCABEZADO Y BOTÓN SALIR === */
-	.header-container {
-		display: flex;	
-		justify-content: space-between;	
-		align-items: center;	
-		margin-bottom: 10px;	
-	}
-	.logout-btn {
-		background: #d32f2f; /* Rojo para el botón de salir */
-		font-weight: bold;
-		padding: 8px 12px;
-	}
-	.logout-btn:hover {
-		opacity: 0.8;
-	}
-	/* ======================================================= */
-
-	/* Estilo para el botón de Google (Login) */
-	.google-btn {	
-		padding: 10px 15px;	
-		margin: 5px 5px 0 0;	
-		border: none;	
-		border-radius: 5px;	
-		cursor: pointer;	
-		background: #db4437; /* Rojo de Google */
-		color: white;	
-		font-weight: bold;
-	}
-	.google-btn:hover { opacity: 0.9; }
-	
-	/* Estilo para los botones generales */
-	button { padding: 10px 15px; margin: 5px 5px 0 0; border: none; border-radius: 5px; cursor: pointer; background: #1976d2; color: white; }
-	button:hover { opacity: 0.9; }
-	
-	/* MODIFICACIÓN CLAVE: REGLAS PARA EL SCROLL EN LA LISTA UL */
-	ul {	
-		list-style-type: none;	
-		padding: 0;	
-		max-height: 400px; /* Altura máxima de la lista */
-		overflow-y: auto;	 /* Habilita el scroll vertical */
-		border: 1px solid #ccc; /* Borde para delimitar el área con scroll */
-		padding-right: 10px; /* Espacio para el scroll */
-	}
-
-	li {	
-		margin: 5px 0;	
-		padding: 10px; /* Aumentado padding para mejor toque en móvil */
-		background: #eaeaea;	
-		border-radius: 5px;	
-		cursor: pointer;	
-		white-space: normal;
-		transition: background-color 0.3s, box-shadow 0.3s;
-	}
-	.completed {	
-		text-decoration: line-through;	
-		color: gray;	
-		background: #f1f1f1;	
-	}
-	.calendar { display: grid; grid-template-columns: repeat(5, 1fr); gap: 5px; }	
-	.day { background: #ddd; padding: 10px; border-radius: 5px; min-height: 60px; }
-	
-	.current-day {
-		background-color: #b0b0b0 !important;
-		border: 2px solid #555;
-	}
-	
-	.stats { font-weight: bold; margin-top: 10px; }
-	
-	.task-buttons {	
-		display: flex;	
-		gap: 10px;	
-		flex-wrap: wrap;	
-		margin-top: 10px;	
-		align-items: flex-start;
-		justify-content: space-between;	
-	}
-	
-	.urgent-tag {
-		color: red;
-		font-weight: bold;
-	}
-
-	/* Estilos para Etiqueta y Fecha lado a lado*/
-	.task-inputs-row {
-		display: flex;	
-		gap: 10px; 	
-		margin: 5px 0 10px 0;	
-	}
-
-	.task-inputs-row select,
-	.task-inputs-row input[type="date"] {
-		width: 50%;	
-		margin: 0; 	
-	}
-
-	/* ESTILOS DEL BANNER DE ALERTA */
-	.alert-banner {
-		padding: 15px;
-		margin-bottom: 20px;
-		border: 1px solid transparent;
-		border-radius: 4px;
-		color: #856404;	
-		background-color: #fff3cd;	
-		border-color: #ffeeba;	
-		font-weight: bold;
-		display: flex;
-		justify-content: space-between;
-		align-items: flex-start;	
-		box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-	}
-	.alert-banner button {
-		background: transparent;
-		color: #856404;
-		border: none;
-		padding: 5px 10px;
-		cursor: pointer;
-		font-weight: bold;
-		font-size: 1.2em;
-		margin-left: 15px;
-		line-height: 1;
-	}
-	.alert-banner button:hover {
-		opacity: 0.7;
-	}
-	.task-list-summary {
-		font-size: 0.9em;
-		margin-top: 5px;
-		white-space: pre-wrap;	
-		font-weight: normal;	
-	}
-
-	.tomorrow-task {
-		font-weight: bold;
-		color: orange;
-	}
-
-	/* === ESTILOS PARA EL TIME TRACKING ACTIVO (1.2) === */
-	@keyframes pulse-active {
-		0% { box-shadow: 0 0 5px rgba(56, 142, 60, 0.4); }
-		50% { box-shadow: 0 0 10px rgba(56, 142, 60, 0.8); }
-		100% { box-shadow: 0 0 5px rgba(56, 142, 60, 0.4); }
-	}
-	.task-running {
-		background-color: #e8f5e9 !important; /* Verde muy claro */
-		border: 2px solid #388e3c; /* Borde verde oscuro */
-		animation: pulse-active 2s infinite;
-	}
-	/* ======================================================= */
-
-	/* === MEDIA QUERIES PARA RESPONSIVIDAD (Paso 2) === */
-	@media (max-width: 768px) {
-		body {
-			padding: 0 10px; /* Reduce padding lateral */
-		}
-	 	
-		/* 1. LAYOUT PRINCIPAL */
-		.header-container {
-			flex-direction: column; /* Apila el título y el botón Salir */
-			align-items: flex-start;
-		}
-		.header-container h1 {
-			font-size: 1.5em;
-		}
-
-		/* 2. TAREAS Y CONTROLES */
-		.task-inputs-row {
-			flex-direction: column; /* Apila Etiqueta y Fecha */
-			gap: 0;
-		}
-		.task-inputs-row select,
-		.task-inputs-row input[type="date"] {
-			width: 100%; /* Ocupan todo el ancho */
-			margin-bottom: 5px;
-		}
-
-		/* 3. BOTONES DE ACCIÓN */
-		.task-buttons {
-			flex-direction: column; /* Apila los grupos de botones */
-			gap: 15px;	
-		}
-
-		/* 4. LISTA DE TAREAS (LI) - Crucial para botones */
-		#taskList li > div {
-			flex-direction: column; /* Apila el texto y los botones */
-			align-items: flex-start;
-		}
-		#taskList li span {
-			margin-bottom: 5px; /* Espacio después del texto de la tarea */
-			display: block;
-			width: 100%; /* Asegura que ocupe todo el ancho para el tap */
-			cursor: pointer;
-		}
-		#taskList li > div > div {
-			/* Contenedor de botones (Editar, Iniciar/Detener, Eliminar) */
-			display: flex;
-			flex-wrap: wrap; /* Envuelve los botones si no caben */
-			margin-top: 5px;
-			width: 100%;
-		}
-		#taskList li > div > div button {
-			margin: 3px 5px 3px 0; /* Espaciado más compacto */
-		}
-	 	
-		/* 5. CALENDARIO */
-		.calendar {
-			grid-template-columns: repeat(3, 1fr); /* Muestra 3 columnas en lugar de 5 en móvil */
-		}
-		.day {
-			min-height: 80px; /* Aumenta un poco la altura para el tacto */
-			padding: 5px;
-		}
-	 	
-		/* 6. BANNER DE ALERTA */
-		.alert-banner {
-			flex-direction: column;
-		}
-		.alert-banner button {
-			align-self: flex-start; /* Alinea el botón de cerrar */
-			margin-left: 0;
-			margin-top: 5px;
-		}
-
-		/* 7. FILTROS RÁPIDOS y ORDENACIÓN */
-		#filterButtons {
-			flex-direction: column;
-		}
-		#filterButtons button {
-			width: 100%;
-			margin: 3px 0;
-		}
-		#sortSelector {
-			width: 100% !important;
-			max-width: none !important;
-		}
-	}
-</style>
-
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-
+  <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+  <meta http-equiv="Content-Style-Type" content="text/css">
+  <title></title>
+  <meta name="Generator" content="Cocoa HTML Writer">
+  <meta name="CocoaVersion" content="2575.7">
+  <style type="text/css">
+    p.p1 {margin: 0.0px 0.0px 0.0px 0.0px; font: 12.0px Helvetica}
+    p.p2 {margin: 0.0px 0.0px 0.0px 0.0px; font: 12.0px Helvetica; min-height: 14.0px}
+  </style>
 </head>
 <body>
-
-<div id="loginSection" class="section" style="display: block;">
-	<p>Inicia sesión con Google para acceder a tu Asistente Diario PRO.</p>
-	<button id="google-login-btn" class="google-btn" onclick="signInWithGoogle()">
-		<img src="https://upload.wikimedia.org/wikipedia/commons/thumb/c/c1/Google_%22G%22_logo.svg/48px-Google_%22G%22_logo.svg.png" alt="Google Logo" style="width: 16px; height: 16px; vertical-align: middle; margin-right: 8px;">
-		Iniciar sesión con Google
-	</button>
-	<p id="authMessage" style="color: gray;">Esperando inicio de sesión...</p>
-</div>
-
-<div id="mainContent" style="display: none;">
-
-	<div class="header-container">
-		<h1 id="userWelcome">Asistente Diario PRO</h1>
-		<button class="logout-btn" onclick="signOutUser()">👋 Cerrar Sesión</button>
-	</div>
-
-	<div id="upcomingTasksBanner" style="display: none;" class="alert-banner">
-	</div>
-	
-	<p id="fecha-hora"></p>
-
-	<div class="section">
-		<h2>✅ Tareas</h2>
-		<input id="taskInput" placeholder="Escribe una tarea..." type="text"/>
-		
-		<div class="task-inputs-row">
-			<select id="taskTag">
-				<option value="">Sin Etiqueta</option>
-				<option value="Urgente">Urgente</option>
-				<option value="Reunión">Reunión</option>
-				<option value="Personal">Personal</option>
-				<option value="Desarrollo">Desarrollo</option>
-				<option value="Otro">Otro</option>
-			</select>
-			<input id="taskDate" type="date"/>
-		</div>
-		
-		<div class="task-buttons">
-			<div style="display: flex; gap: 10px; flex-wrap: wrap;">
-				<button id="addTaskBtn" onclick="addTask()">➕ Agregar tarea</button>
-				<button onclick="clearForm()">🧹 Limpiar formulario</button>
-			</div>
-			<div style="display: flex; gap: 10px; flex-wrap: wrap;">
-				<button onclick="startDictation()">🎙️ Comenzar dictado</button>
-			</div>
-		</div>
-		
-		<p id="recordingTimer" style="display: none;">⏱️ Tiempo de grabación: 0 segundos</p>
-		
-		<p id="statusMessage" style="color: blue;">Esperando inicio de sesión...</p>
-		
-		<div style="margin-bottom: 15px; display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
-			<label for="sortSelector" style="font-weight: bold; white-space: nowrap;">Ordenar por:</label>
-			<select id="sortSelector" style="width: auto; max-width: 200px;" onchange="renderTasks()">
-				<option value="default">Fecha de Creación (Más nuevo primero)</option>
-				<option value="dateAsc">Fecha Límite (Más cercana primero)</option>
-				<option value="dateDesc">Fecha Límite (Más lejana primero)</option>
-				<option value="tagPriority">Etiqueta (Urgente primero)</option>
-			</select>
-		</div>
-
-		<div class="task-buttons" id="filterButtons">
-			<div style="display: flex; gap: 10px; flex-wrap: wrap;">
-				<button onclick="filterTasks('')" id="filter-Todos">
-					Mostrar Todos
-				</button>
-				<button 
-					onclick="filterTasks('Urgente')"
-					id="filter-Urgente">
-					Urgente
-				</button>
-				<button 
-					onclick="filterTasks('Reunión')"
-					id="filter-Reunión">
-					Reunión
-				</button>
-				<button 
-					onclick="filterTasks('Personal')"
-					id="filter-Personal">
-					Personal
-				</button>
-				<button 
-					onclick="filterTasks('Desarrollo')"
-					id="filter-Desarrollo">
-					Desarrollo
-				</button>
-				<button 
-					onclick="filterTasks('Otro')"
-					id="filter-Otro">
-					Otro
-				</button>
-			</div>
-			<div style="display: flex; gap: 10px; flex-wrap: wrap;">
-				<button onclick="clearAllCompletedTasks()" style="background: #e64a19;">❌ Eliminar tareas completadas</button>
-				<button onclick="generatePDFReport()" style="background: #00796b;">📄 Generar Reporte PDF</button>
-			</div>
-		</div>
-
-		<div class="stats">
-			<p>Tareas completadas hoy: <span id="completedToday">0</span></p>
-			<p>Tiempo total de seguimiento: <span id="totalTimeTracked">0h 0m</span> (en <span id="tasksWithTimeCount">0</span> tareas)</p>
-		</div>
-		
-		<ul id="taskList">
-			</ul>
-	</div>
-
-	<div class="section">
-		<h2>📅 Resumen Semanal</h2>
-		<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-			<button onclick="changeMonth(-1)">&#9664; Mes Anterior</button>
-			<h3 id="calendarTitle"></h3>
-			<button onclick="changeMonth(1)">Mes Siguiente &#9654;</button>
-		</div>
-		<div id="calendar" class="calendar">
-			</div>
-	</div>
-
-	<div id="historySection" class="section">
-		<h2>🗑️ Historial de Tareas Completadas (Últimas 5)</h2>
-		<ul id="completedTasksList">
-			</ul>
-	</div>
-
-</div>
-
-<script>
-	// ----------------------------------------------------------------------
-	// ⚠️ ⚙️ CONFIGURACIÓN DE FIREBASE (¡IMPORTANTE!) ⚙️ ⚠️
-	// ----------------------------------------------------------------------
-	// DEBES REEMPLAZAR LA CONFIGURACIÓN DE ABAJO CON TUS CREDENCIALES REALES
-	// PARA QUE LA APLICACIÓN PUEDA CONECTARSE.
-	const firebaseConfig = {
-		// [TUS CREDENCIALES DE FIREBASE AQUÍ]
-		// Ejemplo (BORRA ESTO Y USA TUS DATOS):
-		// apiKey: "AIzaSyB_...",
-		// authDomain: "tu-proyecto.firebaseapp.com",
-		// projectId: "tu-proyecto-id",
-		// storageBucket: "tu-proyecto-id.appspot.com",
-		// messagingSenderId: "...",
-		// appId: "..."
-	};
-
-	// Inicializar Firebase
-	if (!firebase.apps.length) {
-		firebase.initializeApp(firebaseConfig);
-	}
-
-	const db = firebase.firestore();
-	const auth = firebase.auth();
-	const tasksCollection = db.collection("tareas_pro");
-	
-	// Variables globales
-	let tasks = [];
-	let currentUser = null;
-	let editingTaskId = null;
-	let currentFilter = '';
-	const WEEK_DAYS = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
-	let currentCalendarDate = new Date(); // Para el calendario
-	const TAG_PRIORITY = { 'Urgente': 3, 'Reunión': 2, 'Personal': 1, 'Desarrollo': 1, 'Otro': 0, '': 0 }; // Para ordenar por prioridad
-	
-	// Variables del Time Tracker
-	let timerUpdateInterval; // El intervalo que se ejecuta cada segundo para actualizar el tiempo en pantalla
-	
-	// Variables del Dictado de Voz (Restauradas)
-	let recordingInterval; 
-	let recordingSeconds = 0;
-	
-	// ----------------------------------------------------------------------
-	// 💻 ELEMENTOS DOM 💻
-	// ----------------------------------------------------------------------
-	const loginSection = document.getElementById('loginSection');
-	const mainContent = document.getElementById('mainContent');
-	const authMessage = document.getElementById('authMessage');
-	const statusMessage = document.getElementById('statusMessage');
-
-	// ----------------------------------------------------------------------
-	// 💻 FUNCIONES AUXILIARES 💻
-	// ----------------------------------------------------------------------
-	
-	/**
-	 * Formatea una fecha ISO (YYYY-MM-DD) a un formato legible (DD/MM/YYYY)
-	 * @param {string} isoDate La fecha en formato ISO
-	 * @returns {string} La fecha en formato DD/MM/YYYY
-	 */
-	function formatDateToDisplay(isoDate) {
-		if (!isoDate) return 'Sin fecha';
-		const [year, month, day] = isoDate.split('-');
-		return `${day}/${month}/${year}`;
-	}
-	
-	/**
-	 * Formatea un número de milisegundos a un string de horas, minutos y segundos.
-	 * @param {number} ms Milisegundos de tiempo transcurrido.
-	 * @returns {string} Tiempo en formato Hh Mm Ss.
-	 */
-	function formatTime(ms) {
-		const totalSeconds = Math.floor(ms / 1000);
-		const hours = Math.floor(totalSeconds / 3600);
-		const minutes = Math.floor((totalSeconds % 3600) / 60);
-		const seconds = totalSeconds % 60;
-		
-		let timeString = '';
-		if (hours > 0) timeString += `${hours}h `;
-		if (minutes > 0 || hours > 0) timeString += `${minutes}m `;
-		timeString += `${seconds}s`;
-		
-		return timeString.trim();
-	}
-	
-	/**
-	 * Obtiene la fecha de hoy en formato YYYY-MM-DD para el input[type="date"]
-	 */
-	function getTodayDateStrForInput() {
-		const today = new Date();
-		const day = String(today.getDate()).padStart(2, '0');
-		const month = String(today.getMonth() + 1).padStart(2, '0'); // Enero es 0
-		const year = today.getFullYear();
-		return `${year}-${month}-${day}`;
-	}
-	
-	/**
-	 * Inicializa el input de fecha a la fecha actual y establece el mínimo.
-	 */
-	function initializeDateInput() {
-		const todayStr = getTodayDateStrForInput();
-		const taskDateInput = document.getElementById('taskDate');
-		
-		// 1. Establece el valor por defecto a la fecha actual
-		taskDateInput.value = todayStr;
-		
-		// 2. Establece la fecha mínima seleccionable a la fecha actual
-		taskDateInput.min = todayStr;
-	}
-	
-	// ----------------------------------------------------------------------
-	// 💾 FUNCIONES DE DATOS (CLOUD Y LOCAL) 💾
-	// ----------------------------------------------------------------------
-	
-	/**
-	 * Carga los datos de las tareas desde Firestore o Local Storage.
-	 */
-	async function loadData() {
-		if (currentUser) {
-			// Carga desde Firestore
-			try {
-				const doc = await tasksCollection.doc(currentUser.uid).get();
-				if (doc.exists) {
-					tasks = doc.data().tasks || [];
-					tasks = tasks.map(task => {
-						// Asegurar que las nuevas propiedades existan para evitar errores
-						if (typeof task.elapsedTime === 'undefined') task.elapsedTime = 0;
-						if (typeof task.startTime === 'undefined') task.startTime = null;
-						return task;
-					});
-				} else {
-					// Si no existe el documento, se inicializa la lista
-					tasks = [];
-				}
-				statusMessage.style.color = 'green';
-				statusMessage.innerText = '✅ Tareas cargadas desde la nube.';
-			} catch (error) {
-				console.error("Error al cargar las tareas desde Firestore:", error);
-				statusMessage.style.color = 'red';
-				statusMessage.innerText = '❌ Error al cargar tareas desde la nube. Revisa la consola.';
-			}
-		} else {
-			// Carga desde Local Storage (fallback o modo no logueado)
-			const storedTasks = localStorage.getItem('tasks');
-			tasks = storedTasks ? JSON.parse(storedTasks) : [];
-			statusMessage.style.color = 'orange';
-			statusMessage.innerText = '⚠️ Tareas cargadas desde Local Storage.';
-		}
-		
-		// Después de cargar, renderizar y actualizar el calendario
-		renderTasks();
-		renderCalendar();
-		updateDateTime();
-	}
-	
-	/**
-	 * Guarda los datos de las tareas en Firestore o Local Storage.
-	 */
-	function saveData() {
-		if (currentUser) {
-			// Guardar en Firestore
-			tasksCollection.doc(currentUser.uid).set({ tasks: tasks })
-				.then(() => {
-					// console.log("Datos guardados en Firestore.");
-				})
-				.catch((error) => {
-					console.error("Error al guardar en Firestore:", error);
-				});
-		} else {
-			// Guardar en Local Storage
-			localStorage.setItem('tasks', JSON.stringify(tasks));
-		}
-	}
-	
-	// ----------------------------------------------------------------------
-	// ⏱️ FUNCIONES DEL TIME TRACKER ⏱️
-	// ----------------------------------------------------------------------
-	
-	/**
-	 * Inicia el intervalo de actualización global para los timers de tareas.
-	 */
-	function startTimerInterval() {
-		if (timerUpdateInterval) {
-			clearInterval(timerUpdateInterval);
-		}
-		// Se actualiza el tiempo cada segundo para las tareas en ejecución
-		timerUpdateInterval = setInterval(() => {
-			// Solo renderizamos si hay alguna tarea corriendo
-			if (tasks.some(t => t.startTime !== null)) {
-				renderTasks(true); // El 'true' indica que es una actualización silenciosa de tiempo
-				saveData(); // Guardamos el progreso del tiempo cada segundo
-			}
-		}, 1000);
-	}
-	
-	/**
-	 * Función principal para iniciar o detener el cronómetro de una tarea.
-	 * @param {string} taskId El ID de la tarea
-	 */
-	function toggleTimer(taskId) {
-		const taskIndex = tasks.findIndex(t => t.id === taskId);
-		if (taskIndex === -1) return;
-		
-		const task = tasks[taskIndex];
-		const now = Date.now();
-		
-		if (task.startTime) {
-			// 1. DETENER CRONÓMETRO: Calcular tiempo transcurrido
-			const elapsed = now - task.startTime;
-			task.elapsedTime = (task.elapsedTime || 0) + elapsed;
-			task.startTime = null; // Detener
-			statusMessage.style.color = 'gray';
-			statusMessage.innerText = `⏱️ Cronómetro de tarea #${taskIndex + 1} detenido.`;
-		} else {
-			// 2. INICIAR CRONÓMETRO:
-			// Detener cualquier otra tarea que esté corriendo
-			tasks.forEach(t => {
-				if (t.startTime && t.id !== taskId) {
-					t.elapsedTime = (t.elapsedTime || 0) + (now - t.startTime);
-					t.startTime = null;
-				}
-			});
-			
-			// Iniciar la tarea seleccionada
-			task.startTime = now;
-			statusMessage.style.color = '#388e3c'; // Verde
-			statusMessage.innerText = `▶️ Cronómetro de tarea #${taskIndex + 1} iniciado.`;
-		}
-		
-		saveData();
-		renderTasks();
-		startTimerInterval(); // Asegurar que el intervalo esté corriendo
-	}
-	
-	/**
-	 * Calcula el tiempo total invertido en todas las tareas.
-	 */
-	function calculateTotalTime() {
-		let totalMs = 0;
-		let tasksWithTime = 0;
-		
-		tasks.forEach(task => {
-			let currentElapsedTime = task.elapsedTime || 0;
-			
-			// Si la tarea está corriendo, añade el tiempo transcurrido desde startTime
-			if (task.startTime) {
-				const now = Date.now();
-				const elapsedSinceStart = now - task.startTime;
-				currentElapsedTime += elapsedSinceStart;
-			}
-			
-			totalMs += currentElapsedTime;
-			
-			if (currentElapsedTime > 0) {
-				tasksWithTime++;
-			}
-		});
-		
-		document.getElementById('totalTimeTracked').innerText = formatTime(totalMs);
-		document.getElementById('tasksWithTimeCount').innerText = tasksWithTime;
-	}
-	
-	// ----------------------------------------------------------------------
-	// 💬 FUNCIONES DEL DICTADO DE VOZ 💬
-	// ----------------------------------------------------------------------
-
-	function startDictation() {
-		// Verificar soporte
-		if (!('webkitSpeechRecognition' in window)) {
-			statusMessage.style.color = 'red';
-			statusMessage.innerText = '❌ Lo sentimos, tu navegador no soporta Dictado de Voz.';
-			return;
-		}
-		
-		// Inicializar reconocimiento
-		const recognition = new webkitSpeechRecognition();
-		recognition.lang = 'es-ES';
-		recognition.continuous = false; // Detener después de la primera pausa
-		recognition.interimResults = false;
-		
-		// Controlar el estado
-		recognition.onstart = function() {
-			statusMessage.style.color = '#1976d2'; // Azul
-			statusMessage.innerText = '🎙️ Escuchando... Di tu tarea.';
-			
-			// Lógica del contador de tiempo (Mantenida, pero oculta)
-			document.getElementById('recordingTimer').innerText = "🎙️ Escuchando...";
-			recordingSeconds = 0; // Reiniciar contador
-			recordingInterval = setInterval(() => {
-				recordingSeconds++;
-				document.getElementById('recordingTimer').innerText = `🎙️ Grabando: ${recordingSeconds} segundos`;
-			}, 1000); // Actualiza cada segundo
-		};
-		
-		recognition.onresult = function(event) {
-			const transcript = event.results[0][0].transcript;
-			document.getElementById('taskInput').value = transcript;
-			statusMessage.style.color = 'green';
-			statusMessage.innerText = '✅ Dictado finalizado. Texto listo para agregar.';
-			
-			// Lógica del contador de tiempo (Mantenida, pero oculta)
-			clearInterval(recordingInterval);
-			document.getElementById('recordingTimer').innerText = `⏱️ Texto recibido (${recordingSeconds} segundos)`;
-		};
-		
-		recognition.onerror = function(event) {	
-			// Lógica del contador de tiempo (Mantenida, pero oculta)
-			clearInterval(recordingInterval);	
-			document.getElementById('recordingTimer').innerText = `❌ Error en el dictado: ${event.error}`;
-			
-			statusMessage.style.color = 'red';
-			statusMessage.innerText = `❌ Error en el dictado: ${event.error}`;
-		};
-		
-		recognition.onend = function() {	
-			// Lógica del contador de tiempo (Mantenida, pero oculta)
-			clearInterval(recordingInterval);	
-			document.getElementById('recordingTimer').innerText = `⏱️ Dictado finalizado. ${recordingSeconds} segundos`;
-		};
-		
-		try {
-			recognition.start();
-		} catch (e) {
-			console.error("Error al iniciar el reconocimiento de voz:", e);
-			statusMessage.style.color = 'red';
-			statusMessage.innerText = '❌ Error al intentar iniciar el micrófono. Asegúrate de tener permiso.';
-		}
-	}
-
-	// ----------------------------------------------------------------------
-	// ⚙️ FUNCIONES DE MANEJO DE TAREAS (CRUD) ⚙️
-	// ----------------------------------------------------------------------
-	
-	/**
-	 * Agrega una nueva tarea.
-	 */
-	function addTask() {
-		const taskInput = document.getElementById('taskInput');
-		const taskText = taskInput.value.trim();
-		const taskTag = document.getElementById('taskTag').value;
-		const taskDate = document.getElementById('taskDate').value;
-
-		if (taskText === '') {
-			statusMessage.style.color = 'red';
-			statusMessage.innerText = '❌ Por favor, escribe una tarea.';
-			return;
-		}
-
-		const newTask = {
-			id: editingTaskId || Date.now().toString(), // Usa el ID de edición si existe
-			text: taskText,
-			completed: false,
-			date: taskDate,
-			tag: taskTag,
-			createdAt: Date.now(),
-			elapsedTime: 0, // Nuevo campo para el seguimiento de tiempo
-			startTime: null // Nuevo campo para la hora de inicio del cronómetro
-		};
-
-		if (editingTaskId) {
-			// Modo edición
-			const index = tasks.findIndex(t => t.id === editingTaskId);
-			if (index !== -1) {
-				// Mantiene completed, elapsedTime y startTime
-				newTask.completed = tasks[index].completed; 
-				newTask.elapsedTime = tasks[index].elapsedTime; 
-				newTask.startTime = tasks[index].startTime; 
-				tasks[index] = newTask;
-			}
-			editingTaskId = null;
-			document.getElementById('addTaskBtn').innerText = '➕ Agregar tarea';
-			statusMessage.style.color = 'green';
-			statusMessage.innerText = '✅ Tarea editada correctamente.';
-		} else {
-			// Modo nueva tarea
-			tasks.push(newTask);
-			statusMessage.style.color = 'green';
-			statusMessage.innerText = '✅ Tarea agregada correctamente.';
-		}
-		
-		clearForm(false); // Limpia solo el formulario, no la fecha
-		saveData();
-		renderTasks();
-		renderCalendar();
-	}
-	
-	/**
-	 * Limpia los campos del formulario.
-	 * @param {boolean} clearDate Si es true, limpia también la fecha (default: false).
-	 */
-	function clearForm(clearDate = false) {
-		document.getElementById('taskInput').value = '';
-		document.getElementById('taskTag').value = '';
-		if (clearDate) {
-			// Reinicia la fecha al valor por defecto
-			initializeDateInput(); 
-		}
-		editingTaskId = null;
-		document.getElementById('addTaskBtn').innerText = '➕ Agregar tarea';
-		statusMessage.style.color = 'blue';
-		statusMessage.innerText = 'Esperando inicio de sesión...';
-	}
-	
-	/**
-	 * Carga una tarea en el formulario para editarla.
-	 * @param {string} taskId El ID de la tarea a editar.
-	 */
-	function editTask(taskId) {
-		const task = tasks.find(t => t.id === taskId);
-		if (!task) return;
-
-		document.getElementById('taskInput').value = task.text;
-		document.getElementById('taskTag').value = task.tag;
-		document.getElementById('taskDate').value = task.date;
-		
-		editingTaskId = taskId;
-		document.getElementById('addTaskBtn').innerText = '💾 Guardar edición';
-		statusMessage.style.color = 'orange';
-		statusMessage.innerText = `✏️ Editando tarea: ${task.text.substring(0, 30)}...`;
-	}
-
-	/**
-	 * Elimina una tarea.
-	 * @param {string} taskId El ID de la tarea a eliminar.
-	 */
-	function deleteTask(taskId) {
-		if (confirm('¿Estás seguro de que quieres eliminar esta tarea?')) {
-			tasks = tasks.filter(t => t.id !== taskId);
-			saveData();
-			renderTasks();
-			renderCalendar();
-			statusMessage.style.color = 'red';
-			statusMessage.innerText = '🗑️ Tarea eliminada.';
-			
-			// Si la tarea eliminada estaba en edición, limpiar el formulario
-			if (editingTaskId === taskId) {
-				clearForm();
-			}
-		}
-	}
-	
-	/**
-	 * Marca una tarea como completada o incompleta.
-	 * @param {string} taskId El ID de la tarea a modificar.
-	 */
-	function toggleComplete(taskId) {
-		const task = tasks.find(t => t.id === taskId);
-		if (!task) return;
-
-		task.completed = !task.completed;
-		
-		// Lógica del Time Tracker: Si se completa una tarea, detener su cronómetro
-		if (task.completed && task.startTime !== null) {
-			const now = Date.now();
-			const elapsed = now - task.startTime;
-			task.elapsedTime = (task.elapsedTime || 0) + elapsed;
-			task.startTime = null; // Detener
-		}
-
-		// Si se descompleta, no pasa nada con el timer, se mantiene detenido.
-
-		saveData();
-		renderTasks();
-		renderCalendar();
-		renderHistory();
-
-		statusMessage.style.color = 'purple';
-		statusMessage.innerText = task.completed ? '✅ Tarea completada. ¡Bien hecho!' : '🔄 Tarea marcada como pendiente.';
-	}
-	
-	/**
-	 * Filtra la lista de tareas.
-	 * @param {string} filterTag La etiqueta por la que se desea filtrar.
-	 */
-	function filterTasks(filterTag) {
-		currentFilter = filterTag;
-		renderTasks();
-		
-		// Resaltar el botón activo
-		document.querySelectorAll('#filterButtons button').forEach(btn => {
-			btn.style.background = '#1976d2'; // Color por defecto
-		});
-		
-		const activeBtn = document.getElementById(`filter-${filterTag || 'Todos'}`);
-		if (activeBtn) {
-			activeBtn.style.background = '#0d47a1'; // Color de activo
-		}
-	}
-	
-	/**
-	 * Elimina permanentemente todas las tareas que están marcadas como completadas.
-	 */
-	function clearAllCompletedTasks() {
-		if (confirm('¿Estás seguro de que quieres eliminar PERMANENTEMENTE todas las tareas completadas? Esta acción no se puede deshacer.')) {
-			// 1. Respaldar las tareas completadas eliminadas (últimas 5)
-			const completedTasks = tasks.filter(t => t.completed)
-				.sort((a, b) => b.createdAt - a.createdAt); // Ordena por más reciente primero
-
-			const tasksToBackup = completedTasks.slice(0, 5).map(t => ({
-				text: t.text,
-				completedAt: new Date().toLocaleString()
-			}));
-			
-			// Limpia el respaldo antiguo antes de guardar el nuevo
-			cleanUpCompletedTasksBackup(); 
-			localStorage.setItem('completedTasksBackup', JSON.stringify(tasksToBackup));
-			renderHistory();
-
-			// 2. Eliminar de la lista principal
-			tasks = tasks.filter(t => !t.completed);
-			saveData();
-			renderTasks();
-			renderCalendar();
-			statusMessage.style.color = '#e64a19'; // Naranja oscuro
-			statusMessage.innerText = '🗑️ Todas las tareas completadas han sido eliminadas y las últimas 5 respaldadas.';
-		}
-	}
-
-	/**
-	 * Genera un reporte PDF de las tareas pendientes.
-	 */
-	function generatePDFReport() {
-		const { jsPDF } = window.jspdf;
-		const doc = new jsPDF();
-		let y = 10;
-		const lineGap = 7;
-		
-		doc.setFontSize(16);
-		doc.text("Asistente Diario PRO - Reporte de Tareas Pendientes", 10, y);
-		y += lineGap * 2;
-		
-		doc.setFontSize(12);
-		const pendingTasks = tasks.filter(t => !t.completed);
-		
-		if (pendingTasks.length === 0) {
-			doc.text("No hay tareas pendientes.", 10, y);
-		} else {
-			pendingTasks.forEach((task, index) => {
-				const tag = task.tag ? `[${task.tag}] ` : '';
-				const date = task.date ? ` (${formatDateToDisplay(task.date)})` : '';
-				const time = task.elapsedTime ? ` ⏱️ ${formatTime(task.elapsedTime)}` : '';
-				
-				const text = `${index + 1}. ${tag}${task.text}${date}${time}`;
-				
-				// Salto de página si es necesario
-				if (y > 280) { 
-					doc.addPage();
-					y = 10;
-				}
-				
-				doc.text(text, 10, y);
-				y += lineGap;
-			});
-		}
-		
-		doc.save('reporte_tareas_pendientes.pdf');
-		statusMessage.style.color = '#00796b';
-		statusMessage.innerText = '📄 Reporte PDF generado.';
-	}
-
-	// ----------------------------------------------------------------------
-	// 🎨 FUNCIONES DE RENDERIZADO 🎨
-	// ----------------------------------------------------------------------
-
-	/**
-	 * Renderiza la lista de tareas en el DOM.
-	 * @param {boolean} silentUpdate Si es true, solo actualiza la hora (para el cronómetro).
-	 */
-	function renderTasks(silentUpdate = false) {
-		// 1. Aplicar la lógica de ordenación
-		const sortValue = document.getElementById('sortSelector').value;
-		let sortedTasks = [...tasks]; 
-
-		if (sortValue === 'dateAsc') {
-			sortedTasks.sort((a, b) => {
-				if (a.completed !== b.completed) return a.completed ? 1 : -1;
-				if (!a.date) return 1; 
-				if (!b.date) return -1;
-				return new Date(a.date) - new Date(b.date);
-			});
-		} else if (sortValue === 'dateDesc') {
-			sortedTasks.sort((a, b) => {
-				if (a.completed !== b.completed) return a.completed ? 1 : -1;
-				if (!a.date) return 1; 
-				if (!b.date) return -1;
-				return new Date(b.date) - new Date(a.date);
-			});
-		} else if (sortValue === 'tagPriority') {
-			sortedTasks.sort((a, b) => {
-				if (a.completed !== b.completed) return a.completed ? 1 : -1;
-				// Ordena por prioridad (Urgente > Reunión > Personal/Desarrollo/Otro)
-				return TAG_PRIORITY[b.tag || ''] - TAG_PRIORITY[a.tag || '']; 
-			});
-		} else { // default: por fecha de creación descendente
-			sortedTasks.sort((a, b) => {
-				if (a.completed !== b.completed) return a.completed ? 1 : -1;
-				return b.createdAt - a.createdAt;
-			});
-		}
-		
-		// 2. Aplicar el filtro por etiqueta
-		const filteredTasks = sortedTasks.filter(t => 
-			!currentFilter || t.tag === currentFilter
-		);
-
-		const taskList = document.getElementById('taskList');
-		
-		// Si es una actualización silenciosa, solo actualizamos los elementos de tiempo
-		if (silentUpdate) {
-			calculateTotalTime();
-			filteredTasks.forEach(task => {
-				const timeElement = document.getElementById(`time-${task.id}`);
-				if (timeElement) {
-					let totalMs = task.elapsedTime || 0;
-					// Si está corriendo, sumar el tiempo desde el inicio
-					if (task.startTime) {
-						totalMs += (Date.now() - task.startTime);
-					}
-					timeElement.innerText = `⏱️ ${formatTime(totalMs)}`;
-				}
-			});
-			return; // Finalizar la función para la actualización silenciosa
-		}
-
-
-		// 3. Renderizado completo
-		taskList.innerHTML = '';
-		const todayStr = getTodayDateStrForInput();
-		let completedTodayCount = 0;
-		const tasksForBanner = [];
-
-		filteredTasks.forEach(task => {
-			if (task.completed) {
-				const completedDateStr = new Date(task.createdAt).toISOString().split('T')[0];
-				if (completedDateStr === todayStr) {
-					completedTodayCount++;
-				}
-			}
-
-			// Lógica para el banner de tareas próximas
-			if (!task.completed && task.date && task.date >= todayStr) {
-				const diffTime = new Date(task.date).getTime() - new Date(todayStr).getTime();
-				const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-				
-				if (diffDays >= 0 && diffDays <= 7) {
-					tasksForBanner.push({
-						text: task.text,
-						date: task.date,
-						days: diffDays,
-						tag: task.tag
-					});
-				}
-			}
-
-			// Crear el elemento LI
-			const li = document.createElement('li');
-			li.className = task.completed ? 'completed' : '';
-			// Si la tarea está corriendo, añade la clase de animación
-			if (task.startTime) {
-				li.classList.add('task-running');
-			}
-			
-			// 3.1 Contenido de la tarea (flexbox)
-			const taskContentDiv = document.createElement('div');
-			taskContentDiv.style.display = 'flex';
-			taskContentDiv.style.justifyContent = 'space-between';
-			taskContentDiv.style.alignItems = 'center';
-
-			// 3.2 Texto, Etiqueta, Fecha y Timer (lado izquierdo)
-			const infoSpan = document.createElement('span');
-			let tagHtml = task.tag ? `<span class="urgent-tag">[${task.tag}]</span> ` : '';
-			let dateHtml = task.date ? `<small style="display: block; color: #555;">Fecha límite: ${formatDateToDisplay(task.date)}</small>` : '';
-			
-			// Calcular y mostrar tiempo
-			let totalMs = task.elapsedTime || 0;
-			if (task.startTime) {
-				totalMs += (Date.now() - task.startTime);
-			}
-			const timeSpan = `<span id="time-${task.id}" style="font-weight: bold; color: #333;">⏱️ ${formatTime(totalMs)}</span>`;
-
-
-			infoSpan.innerHTML = `${tagHtml}${task.text}${dateHtml}${timeSpan}`;
-			infoSpan.onclick = () => toggleComplete(task.id);
-			
-			// 3.3 Botones de acción (lado derecho)
-			const buttonDiv = document.createElement('div');
-			
-			const editBtn = document.createElement('button');
-			editBtn.innerText = '✏️ Editar';
-			editBtn.style.background = '#f9a825';
-			editBtn.onclick = (e) => { e.stopPropagation(); editTask(task.id); }; // Detener propagación
-			
-			const deleteBtn = document.createElement('button');
-			deleteBtn.innerText = '🗑️ Eliminar';
-			deleteBtn.style.background = '#d32f2f';
-			deleteBtn.onclick = (e) => { e.stopPropagation(); deleteTask(task.id); };
-			
-			const timerBtn = document.createElement('button');
-			// Cambia el texto del botón según si está corriendo o no
-			timerBtn.innerText = task.startTime ? '❚❚ Detener' : '▶️ Iniciar'; 
-			timerBtn.style.background = task.startTime ? '#ef6c00' : '#388e3c'; // Naranja/Verde
-			timerBtn.onclick = (e) => { e.stopPropagation(); toggleTimer(task.id); };
-
-
-			// Agrega los botones al div
-			buttonDiv.appendChild(editBtn);
-			buttonDiv.appendChild(timerBtn);
-			buttonDiv.appendChild(deleteBtn);
-			
-			// 3.4 Ensamblar el LI
-			taskContentDiv.appendChild(infoSpan);
-			taskContentDiv.appendChild(buttonDiv);
-			li.appendChild(taskContentDiv);
-			taskList.appendChild(li);
-		});
-
-		// 4. Actualizar estadísticas
-		document.getElementById('completedToday').innerText = completedTodayCount;
-		calculateTotalTime();
-
-		// 5. Renderizar el Banner de Tareas Próximas
-		renderUpcomingTasksBanner(tasksForBanner);
-	}
-	
-	/**
-	 * Renderiza el historial de las últimas 5 tareas completadas del respaldo local.
-	 */
-	function renderHistory() {
-		const historyList = document.getElementById('completedTasksList');
-		historyList.innerHTML = '';
-		
-		const storedBackup = localStorage.getItem('completedTasksBackup');
-		const backupTasks = storedBackup ? JSON.parse(storedBackup) : [];
-		
-		if (backupTasks.length === 0) {
-			historyList.innerHTML = '<li>No hay historial de tareas completadas eliminadas.</li>';
-			return;
-		}
-		
-		backupTasks.forEach(task => {
-			const li = document.createElement('li');
-			li.className = 'completed';
-			li.style.textDecoration = 'none'; // Quitar tachado en el historial para más claridad
-			li.innerHTML = `
-				${task.text}
-				<small style="display: block; color: #888;">Eliminada el: ${task.completedAt}</small>
-			`;
-			historyList.appendChild(li);
-		});
-	}
-
-	/**
-	 * Mantiene solo las últimas 5 tareas en el respaldo local.
-	 */
-	function cleanUpCompletedTasksBackup() {
-		const storedBackup = localStorage.getItem('completedTasksBackup');
-		if (storedBackup) {
-			let backupTasks = JSON.parse(storedBackup);
-			// Asegurar que solo queden las últimas 5
-			if (backupTasks.length > 5) {
-				backupTasks = backupTasks.slice(0, 5);
-				localStorage.setItem('completedTasksBackup', JSON.stringify(backupTasks));
-			}
-		}
-	}
-
-	/**
-	 * Muestra el banner con un resumen de las tareas próximas.
-	 * @param {Array<object>} tasksData Array de tareas próximas.
-	 */
-	function renderUpcomingTasksBanner(tasksData) {
-		const banner = document.getElementById('upcomingTasksBanner');
-		const todayStr = getTodayDateStrForInput();
-		
-		if (tasksData.length === 0) {
-			banner.style.display = 'none';
-			return;
-		}
-
-		tasksData.sort((a, b) => new Date(a.date) - new Date(b.date));
-
-		let summary = '';
-		tasksData.forEach(t => {
-			let dateText;
-			if (t.date === todayStr) {
-				dateText = '¡HOY!';
-			} else if (t.days === 1) {
-				dateText = 'Mañana';
-			} else {
-				dateText = `en ${t.days} días (${formatDateToDisplay(t.date)})`;
-			}
-			
-			summary += `\n- ${t.text} (${t.tag || 'Sin Etiqueta'}) - ${dateText}`;
-		});
-		
-		banner.innerHTML = `
-			<div>
-				🔔 **TAREAS PRÓXIMAS (7 DÍAS)**
-				<pre class="task-list-summary">${summary}</pre>
-			</div>
-			<button onclick="document.getElementById('upcomingTasksBanner').style.display='none'">✖️</button>
-		`;
-		banner.style.display = 'flex';
-	}
-	
-	// ----------------------------------------------------------------------
-	// 🗓️ FUNCIONES DEL CALENDARIO 🗓️
-	// ----------------------------------------------------------------------
-
-	/**
-	 * Renderiza el calendario mensual.
-	 */
-	function renderCalendar() {
-		const year = currentCalendarDate.getFullYear();
-		const month = currentCalendarDate.getMonth();
-		const calendarTitle = document.getElementById('calendarTitle');
-		calendarTitle.innerText = `${currentCalendarDate.toLocaleString('es-ES', { month: 'long', year: 'numeric' })}`;
-		
-		const calendar = document.getElementById('calendar');
-		calendar.innerHTML = ''; // Limpiar
-		
-		// Días de la semana
-		WEEK_DAYS.forEach(day => {
-			const header = document.createElement('div');
-			header.innerText = day;
-			header.style.fontWeight = 'bold';
-			header.style.textAlign = 'center';
-			calendar.appendChild(header);
-		});
-		
-		const firstDayOfMonth = new Date(year, month, 1).getDay(); // 0 (Dom) - 6 (Sáb)
-		const daysInMonth = new Date(year, month + 1, 0).getDate();
-		const today = getTodayDateStrForInput();
-
-		// Rellenar espacios vacíos al inicio
-		for (let i = 0; i < firstDayOfMonth; i++) {
-			calendar.innerHTML += '<div class="day" style="background: none; border: none;"></div>';
-		}
-		
-		// Días del mes
-		for (let day = 1; day <= daysInMonth; day++) {
-			const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-			
-			// Contar tareas para este día
-			const tasksForDay = tasks.filter(t => t.date === dateStr && !t.completed);
-			const completedForDay = tasks.filter(t => t.date === dateStr && t.completed).length;
-			
-			const dayDiv = document.createElement('div');
-			dayDiv.className = 'day';
-			dayDiv.dataset.date = dateStr;
-			dayDiv.onclick = () => document.getElementById('taskDate').value = dateStr; // Rellenar input al hacer clic
-			
-			if (dateStr === today) {
-				dayDiv.classList.add('current-day');
-			}
-			
-			let content = `<strong>${day}</strong>`;
-			
-			if (tasksForDay.length > 0) {
-				const urgentTasks = tasksForDay.filter(t => t.tag === 'Urgente').length;
-				let color = '#333';
-				if (urgentTasks > 0) {
-					color = 'red';
-				} else if (tasksForDay.length > 0) {
-					color = '#1976d2';
-				}
-				
-				content += `<p style="margin: 5px 0 0 0; color: ${color}; font-weight: bold; font-size: 0.8em;">${tasksForDay.length} Tarea(s)</p>`;
-			}
-			
-			if (completedForDay > 0) {
-				content += `<p style="margin: 0; color: green; font-size: 0.7em;">${completedForDay} Compl.</p>`;
-			}
-
-			dayDiv.innerHTML = content;
-			calendar.appendChild(dayDiv);
-		}
-	}
-	
-	/**
-	 * Cambia el mes visualizado en el calendario.
-	 * @param {number} offset 1 para siguiente mes, -1 para mes anterior.
-	 */
-	function changeMonth(offset) {
-		currentCalendarDate.setMonth(currentCalendarDate.getMonth() + offset);
-		renderCalendar();
-	}
-
-
-	// ----------------------------------------------------------------------
-	// 👤 FUNCIONES DE AUTENTICACIÓN 👤
-	// ----------------------------------------------------------------------
-
-	/**
-	 * Inicia sesión con Google.
-	 */
-	function signInWithGoogle() {
-		const provider = new firebase.auth.GoogleAuthProvider();
-		auth.signInWithPopup(provider)
-			.then((result) => {
-				// El observador onAuthStateChanged maneja la actualización de la UI
-			})
-			.catch((error) => {
-				console.error("Error de autenticación de Google:", error);
-				authMessage.style.color = 'red';
-				authMessage.innerText = `❌ Error al iniciar sesión: ${error.message}`;
-			});
-	}
-
-	/**
-	 * Cierra la sesión del usuario.
-	 */
-	function signOutUser() {
-		auth.signOut()
-			.then(() => {
-				// El observador onAuthStateChanged maneja la actualización de la UI
-			})
-			.catch((error) => {
-				console.error("Error al cerrar sesión:", error);
-			});
-	}
-
-	// Observador de estado de autenticación
-	auth.onAuthStateChanged(user => {
-		currentUser = user;
-		if (user) {
-			// Usuario logueado
-			loginSection.style.display = 'none';
-			mainContent.style.display = 'block';
-			document.getElementById('userWelcome').innerText = `Asistente Diario PRO (${user.displayName})`;
-			loadData();
-			startTimerInterval(); // Iniciar el intervalo global
-		} else {
-			// Usuario desconectado
-			currentUser = null;
-			loginSection.style.display = 'block';
-			mainContent.style.display = 'none';
-			authMessage.style.color = 'gray';
-			authMessage.innerText = 'Esperando inicio de sesión...';
-			tasks = [];
-			renderTasks(); // Limpia la lista de tareas
-			
-			// Si el usuario cierra sesión, cargar datos de Local Storage como fallback
-			loadData(); 
-			
-			// Limpiar el intervalo del cronómetro
-			if (timerUpdateInterval) {
-				clearInterval(timerUpdateInterval);
-			}
-		}
-	});
-
-	// ----------------------------------------------------------------------
-	// 🚀 INICIALIZACIÓN 🚀
-	// ----------------------------------------------------------------------
-
-	/**
-	 * Muestra la fecha y hora actualizadas.
-	 */
-	function updateDateTime() {
-		const now = new Date();
-		document.getElementById('fecha-hora').innerText = now.toLocaleString('es-ES', {
-			weekday: 'long', 
-			year: 'numeric', 
-			month: 'long', 
-			day: 'numeric',
-			hour: '2-digit',
-			minute: '2-digit',
-			second: '2-digit'
-		});
-	}
-
-	// Llamadas iniciales
-	initializeDateInput();
-	renderHistory(); // Cargar historial al inicio
-	
-	// Actualizar fecha y hora cada segundo
-	setInterval(updateDateTime, 1000); 
-
-	// La carga de datos y el renderizado se manejan dentro de auth.onAuthStateChanged
-	// para asegurar que se use el UID correcto o el Local Storage.
-	
-</script>
-
-</body>
-</html>
+<p class="p1">&lt;!DOCTYPE html&gt;</p>
+<p class="p1">&lt;html lang="es"&gt;</p>
+<p class="p1">&lt;head&gt;</p>
+<p class="p1">&lt;meta charset="utf-8"/&gt;</p>
+<p class="p1">&lt;title&gt;Asistente Diario PRO - Versión Unificada (Cloud + Funciones Avanzadas)&lt;/title&gt;</p>
+<p class="p1">&lt;style&gt;</p>
+<p class="p1"><span class="Apple-converted-space">    </span>/* Diseño Base */</p>
+<p class="p1"><span class="Apple-converted-space">    </span>body {<span class="Apple-converted-space"> </span></p>
+<p class="p1"><span class="Apple-converted-space">        </span>font-family: Arial, sans-serif;<span class="Apple-converted-space"> </span></p>
+<p class="p1"><span class="Apple-converted-space">        </span>margin: 20px auto;<span class="Apple-converted-space"> </span></p>
+<p class="p1"><span class="Apple-converted-space">        </span>background: #f4f4f4;<span class="Apple-converted-space"> </span></p>
+<p class="p1"><span class="Apple-converted-space">        </span>max-width: 1200px;<span class="Apple-converted-space"> </span></p>
+<p class="p1"><span class="Apple-converted-space">        </span>padding: 0 20px;<span class="Apple-converted-space"> </span></p>
+<p class="p1"><span class="Apple-converted-space">    </span>}</p>
+<p class="p2"><span class="Apple-converted-space">    </span></p>
+<p class="p1"><span class="Apple-converted-space">    </span>h1 { color: #333; }</p>
+<p class="p1"><span class="Apple-converted-space">    </span>.section { margin-bottom: 30px; background: #fff; padding: 20px; border-radius: 8px; }</p>
+<p class="p1"><span class="Apple-converted-space">    </span>input, textarea, select { margin: 5px 0; padding: 8px; width: 100%; border: 1px solid #ccc; border-radius: 4px; }</p>
+<p class="p2"><span class="Apple-converted-space">    </span></p>
+<p class="p1"><span class="Apple-converted-space">    </span>/* === ESTILOS PARA EL ENCABEZADO Y BOTÓN SALIR === */</p>
+<p class="p1"><span class="Apple-converted-space">    </span>.header-container {</p>
+<p class="p1"><span class="Apple-converted-space">        </span>display: flex;<span class="Apple-converted-space"> </span></p>
+<p class="p1"><span class="Apple-converted-space">        </span>justify-content: space-between;<span class="Apple-converted-space"> </span></p>
+<p class="p1"><span class="Apple-converted-space">        </span>align-items: center;<span class="Apple-converted-space"> </span></p>
+<p class="p1"><span class="Apple-converted-space">        </span>margin-bottom: 10px;<span class="Apple-converted-space"> </span></p>
+<p class="p1"><span class="Apple-converted-space">    </span>}</p>
+<p class="p1"><span class="Apple-converted-space">    </span>.logout-btn {</p>
+<p class="p1"><span class="Apple-converted-space">        </span>background: #d32f2f; /* Rojo para el botón de salir */</p>
+<p class="p1"><span class="Apple-converted-space">        </span>font-weight: bold;</p>
+<p class="p1"><span class="Apple-converted-space">        </span>padding: 8px 12px;</p>
+<p class="p1"><span class="Apple-converted-space">    </span>}</p>
+<p class="p1"><span class="Apple-converted-space">    </span>.logout-btn:hover {</p>
+<p class="p1"><span class="Apple-converted-space">        </span>opacity: 0.8;</p>
+<p class="p1"><span class="Apple-converted-space">    </span>}</p>
+<p class="p1"><span class="Apple-converted-space">    </span>/* ======================================================= */</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">    </span>/* Estilo para el botón de Google (Login) */</p>
+<p class="p1"><span class="Apple-converted-space">    </span>.google-btn {<span class="Apple-converted-space"> </span></p>
+<p class="p1"><span class="Apple-converted-space">        </span>padding: 10px 15px;<span class="Apple-converted-space"> </span></p>
+<p class="p1"><span class="Apple-converted-space">        </span>margin: 5px 5px 0 0;<span class="Apple-converted-space"> </span></p>
+<p class="p1"><span class="Apple-converted-space">        </span>border: none;<span class="Apple-converted-space"> </span></p>
+<p class="p1"><span class="Apple-converted-space">        </span>border-radius: 5px;<span class="Apple-converted-space"> </span></p>
+<p class="p1"><span class="Apple-converted-space">        </span>cursor: pointer;<span class="Apple-converted-space"> </span></p>
+<p class="p1"><span class="Apple-converted-space">        </span>background: #db4437; /* Rojo de Google */</p>
+<p class="p1"><span class="Apple-converted-space">        </span>color: white;<span class="Apple-converted-space"> </span></p>
+<p class="p1"><span class="Apple-converted-space">        </span>font-weight: bold;</p>
+<p class="p1"><span class="Apple-converted-space">    </span>}</p>
+<p class="p1"><span class="Apple-converted-space">    </span>.google-btn:hover { opacity: 0.9; }</p>
+<p class="p2"><span class="Apple-converted-space">    </span></p>
+<p class="p1"><span class="Apple-converted-space">    </span>/* Estilo para los botones generales */</p>
+<p class="p1"><span class="Apple-converted-space">    </span>button { padding: 10px 15px; margin: 5px 5px 0 0; border: none; border-radius: 5px; cursor: pointer; background: #1976d2; color: white; }</p>
+<p class="p1"><span class="Apple-converted-space">    </span>button:hover { opacity: 0.9; }</p>
+<p class="p2"><span class="Apple-converted-space">    </span></p>
+<p class="p1"><span class="Apple-converted-space">    </span>/* MODIFICACIÓN CLAVE: REGLAS PARA EL SCROLL EN LA LISTA UL */</p>
+<p class="p1"><span class="Apple-converted-space">    </span>ul {<span class="Apple-converted-space"> </span></p>
+<p class="p1"><span class="Apple-converted-space">        </span>list-style-type: none;<span class="Apple-converted-space"> </span></p>
+<p class="p1"><span class="Apple-converted-space">        </span>padding: 0;<span class="Apple-converted-space"> </span></p>
+<p class="p1"><span class="Apple-converted-space">        </span>max-height: 400px; /* Altura máxima de la lista */</p>
+<p class="p1"><span class="Apple-converted-space">        </span>overflow-y: auto;<span class="Apple-converted-space">  </span>/* Habilita el scroll vertical */</p>
+<p class="p1"><span class="Apple-converted-space">        </span>border: 1px solid #ccc; /* Borde para delimitar el área con scroll */</p>
+<p class="p1"><span class="Apple-converted-space">        </span>padding-right: 10px; /* Espacio para el scroll */</p>
+<p class="p1"><span class="Apple-converted-space">    </span>}</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">    </span>li {<span class="Apple-converted-space"> </span></p>
+<p class="p1"><span class="Apple-converted-space">        </span>margin: 5px 0;<span class="Apple-converted-space"> </span></p>
+<p class="p1"><span class="Apple-converted-space">        </span>padding: 10px; /* Aumentado padding para mejor toque en móvil */</p>
+<p class="p1"><span class="Apple-converted-space">        </span>background: #eaeaea;<span class="Apple-converted-space"> </span></p>
+<p class="p1"><span class="Apple-converted-space">        </span>border-radius: 5px;<span class="Apple-converted-space"> </span></p>
+<p class="p1"><span class="Apple-converted-space">        </span>cursor: pointer;<span class="Apple-converted-space"> </span></p>
+<p class="p1"><span class="Apple-converted-space">        </span>white-space: normal;</p>
+<p class="p1"><span class="Apple-converted-space">        </span>transition: background-color 0.3s, box-shadow 0.3s;</p>
+<p class="p1"><span class="Apple-converted-space">    </span>}</p>
+<p class="p1"><span class="Apple-converted-space">    </span>.completed {<span class="Apple-converted-space"> </span></p>
+<p class="p1"><span class="Apple-converted-space">        </span>text-decoration: line-through;<span class="Apple-converted-space"> </span></p>
+<p class="p1"><span class="Apple-converted-space">        </span>color: gray;<span class="Apple-converted-space"> </span></p>
+<p class="p1"><span class="Apple-converted-space">        </span>background: #f1f1f1;<span class="Apple-converted-space"> </span></p>
+<p class="p1"><span class="Apple-converted-space">    </span>}</p>
+<p class="p1"><span class="Apple-converted-space">    </span>.calendar { display: grid; grid-template-columns: repeat(5, 1fr); gap: 5px; }<span class="Apple-converted-space"> </span></p>
+<p class="p1"><span class="Apple-converted-space">    </span>.day { background: #ddd; padding: 10px; border-radius: 5px; min-height: 60px; }</p>
+<p class="p2"><span class="Apple-converted-space">    </span></p>
+<p class="p1"><span class="Apple-converted-space">    </span>.current-day {</p>
+<p class="p1"><span class="Apple-converted-space">        </span>background-color: #b0b0b0 !important;</p>
+<p class="p1"><span class="Apple-converted-space">        </span>border: 2px solid #555;</p>
+<p class="p1"><span class="Apple-converted-space">    </span>}</p>
+<p class="p2"><span class="Apple-converted-space">    </span></p>
+<p class="p1"><span class="Apple-converted-space">    </span>.stats { font-weight: bold; margin-top: 10px; }</p>
+<p class="p2"><span class="Apple-converted-space">    </span></p>
+<p class="p1"><span class="Apple-converted-space">    </span>.task-buttons {<span class="Apple-converted-space"> </span></p>
+<p class="p1"><span class="Apple-converted-space">        </span>display: flex;<span class="Apple-converted-space"> </span></p>
+<p class="p1"><span class="Apple-converted-space">        </span>gap: 10px;<span class="Apple-converted-space"> </span></p>
+<p class="p1"><span class="Apple-converted-space">        </span>flex-wrap: wrap;<span class="Apple-converted-space"> </span></p>
+<p class="p1"><span class="Apple-converted-space">        </span>margin-top: 10px;<span class="Apple-converted-space"> </span></p>
+<p class="p1"><span class="Apple-converted-space">        </span>align-items: flex-start;</p>
+<p class="p1"><span class="Apple-converted-space">        </span>justify-content: space-between;<span class="Apple-converted-space"> </span></p>
+<p class="p1"><span class="Apple-converted-space">    </span>}</p>
+<p class="p2"><span class="Apple-converted-space">    </span></p>
+<p class="p1"><span class="Apple-converted-space">    </span>.urgent-tag {</p>
+<p class="p1"><span class="Apple-converted-space">        </span>color: red;</p>
+<p class="p1"><span class="Apple-converted-space">        </span>font-weight: bold;</p>
+<p class="p1"><span class="Apple-converted-space">    </span>}</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">    </span>/* Estilos para Etiqueta y Fecha lado a lado*/</p>
+<p class="p1"><span class="Apple-converted-space">    </span>.task-inputs-row {</p>
+<p class="p1"><span class="Apple-converted-space">        </span>display: flex;<span class="Apple-converted-space"> </span></p>
+<p class="p1"><span class="Apple-converted-space">        </span>gap: 10px; <span class="Apple-converted-space">   </span></p>
+<p class="p1"><span class="Apple-converted-space">        </span>margin: 5px 0 10px 0;<span class="Apple-converted-space"> </span></p>
+<p class="p1"><span class="Apple-converted-space">    </span>}</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">    </span>.task-inputs-row select,</p>
+<p class="p1"><span class="Apple-converted-space">    </span>.task-inputs-row input[type="date"] {</p>
+<p class="p1"><span class="Apple-converted-space">        </span>width: 50%;<span class="Apple-converted-space"> </span></p>
+<p class="p1"><span class="Apple-converted-space">        </span>margin: 0; <span class="Apple-converted-space"> </span></p>
+<p class="p1"><span class="Apple-converted-space">    </span>}</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">    </span>/* ESTILOS DEL BANNER DE ALERTA */</p>
+<p class="p1"><span class="Apple-converted-space">    </span>.alert-banner {</p>
+<p class="p1"><span class="Apple-converted-space">        </span>padding: 15px;</p>
+<p class="p1"><span class="Apple-converted-space">        </span>margin-bottom: 20px;</p>
+<p class="p1"><span class="Apple-converted-space">        </span>border: 1px solid transparent;</p>
+<p class="p1"><span class="Apple-converted-space">        </span>border-radius: 4px;</p>
+<p class="p1"><span class="Apple-converted-space">        </span>color: #856404;<span class="Apple-converted-space"> </span></p>
+<p class="p1"><span class="Apple-converted-space">        </span>background-color: #fff3cd;<span class="Apple-converted-space"> </span></p>
+<p class="p1"><span class="Apple-converted-space">        </span>border-color: #ffeeba;<span class="Apple-converted-space"> </span></p>
+<p class="p1"><span class="Apple-converted-space">        </span>font-weight: bold;</p>
+<p class="p1"><span class="Apple-converted-space">        </span>display: flex;</p>
+<p class="p1"><span class="Apple-converted-space">        </span>justify-content: space-between;</p>
+<p class="p1"><span class="Apple-converted-space">        </span>align-items: flex-start;<span class="Apple-converted-space"> </span></p>
+<p class="p1"><span class="Apple-converted-space">        </span>box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);</p>
+<p class="p1"><span class="Apple-converted-space">    </span>}</p>
+<p class="p1"><span class="Apple-converted-space">    </span>.alert-banner button {</p>
+<p class="p1"><span class="Apple-converted-space">        </span>background: transparent;</p>
+<p class="p1"><span class="Apple-converted-space">        </span>color: #856404;</p>
+<p class="p1"><span class="Apple-converted-space">        </span>border: none;</p>
+<p class="p1"><span class="Apple-converted-space">        </span>padding: 5px 10px;</p>
+<p class="p1"><span class="Apple-converted-space">        </span>cursor: pointer;</p>
+<p class="p1"><span class="Apple-converted-space">        </span>font-weight: bold;</p>
+<p class="p1"><span class="Apple-converted-space">        </span>font-size: 1.2em;</p>
+<p class="p1"><span class="Apple-converted-space">        </span>margin-left: 15px;</p>
+<p class="p1"><span class="Apple-converted-space">        </span>line-height: 1;</p>
+<p class="p1"><span class="Apple-converted-space">    </span>}</p>
+<p class="p1"><span class="Apple-converted-space">    </span>.alert-banner button:hover {</p>
+<p class="p1"><span class="Apple-converted-space">        </span>opacity: 0.7;</p>
+<p class="p1"><span class="Apple-converted-space">    </span>}</p>
+<p class="p1"><span class="Apple-converted-space">    </span>.task-list-summary {</p>
+<p class="p1"><span class="Apple-converted-space">        </span>font-size: 0.9em;</p>
+<p class="p1"><span class="Apple-converted-space">        </span>margin-top: 5px;</p>
+<p class="p1"><span class="Apple-converted-space">        </span>white-space: pre-wrap;<span class="Apple-converted-space"> </span></p>
+<p class="p1"><span class="Apple-converted-space">        </span>font-weight: normal;<span class="Apple-converted-space"> </span></p>
+<p class="p1"><span class="Apple-converted-space">    </span>}</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">    </span>.tomorrow-task {</p>
+<p class="p1"><span class="Apple-converted-space">        </span>font-weight: bold;</p>
+<p class="p1"><span class="Apple-converted-space">        </span>color: orange;</p>
+<p class="p1"><span class="Apple-converted-space">    </span>}</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">    </span>/* === ESTILOS PARA EL TIME TRACKING ACTIVO (1.2) === */</p>
+<p class="p1"><span class="Apple-converted-space">    </span>@keyframes pulse-active {</p>
+<p class="p1"><span class="Apple-converted-space">        </span>0% { box-shadow: 0 0 5px rgba(56, 142, 60, 0.4); }</p>
+<p class="p1"><span class="Apple-converted-space">        </span>50% { box-shadow: 0 0 10px rgba(56, 142, 60, 0.8); }</p>
+<p class="p1"><span class="Apple-converted-space">        </span>100% { box-shadow: 0 0 5px rgba(56, 142, 60, 0.4); }</p>
+<p class="p1"><span class="Apple-converted-space">    </span>}</p>
+<p class="p1"><span class="Apple-converted-space">    </span>.task-running {</p>
+<p class="p1"><span class="Apple-converted-space">        </span>background-color: #e8f5e9 !important; /* Verde muy claro */</p>
+<p class="p1"><span class="Apple-converted-space">        </span>border: 2px solid #388e3c; /* Borde verde oscuro */</p>
+<p class="p1"><span class="Apple-converted-space">        </span>animation: pulse-active 2s infinite;</p>
+<p class="p1"><span class="Apple-converted-space">  </span>}</p>
+<p class="p1"><span class="Apple-converted-space">    </span>/* ======================================================= */</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">    </span>/* === MEDIA QUERIES PARA RESPONSIVIDAD (Paso 2) === */</p>
+<p class="p1"><span class="Apple-converted-space">    </span>@media (max-width: 768px) {</p>
+<p class="p1"><span class="Apple-converted-space">        </span>body {</p>
+<p class="p1"><span class="Apple-converted-space">            </span>padding: 0 10px; /* Reduce padding lateral */</p>
+<p class="p1"><span class="Apple-converted-space">        </span>}</p>
+<p class="p2"><span class="Apple-converted-space">        </span></p>
+<p class="p1"><span class="Apple-converted-space">        </span>/* 1. LAYOUT PRINCIPAL */</p>
+<p class="p1"><span class="Apple-converted-space">        </span>.header-container {</p>
+<p class="p1"><span class="Apple-converted-space">            </span>flex-direction: column; /* Apila el título y el botón Salir */</p>
+<p class="p1"><span class="Apple-converted-space">            </span>align-items: flex-start;</p>
+<p class="p1"><span class="Apple-converted-space">        </span>}</p>
+<p class="p1"><span class="Apple-converted-space">        </span>.header-container h1 {</p>
+<p class="p1"><span class="Apple-converted-space">            </span>font-size: 1.5em;</p>
+<p class="p1"><span class="Apple-converted-space">        </span>}</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">        </span>/* 2. TAREAS Y CONTROLES */</p>
+<p class="p1"><span class="Apple-converted-space">        </span>.task-inputs-row {</p>
+<p class="p1"><span class="Apple-converted-space">            </span>flex-direction: column; /* Apila Etiqueta y Fecha */</p>
+<p class="p1"><span class="Apple-converted-space">            </span>gap: 0;</p>
+<p class="p1"><span class="Apple-converted-space">        </span>}</p>
+<p class="p1"><span class="Apple-converted-space">        </span>.task-inputs-row select,</p>
+<p class="p1"><span class="Apple-converted-space">        </span>.task-inputs-row input[type="date"] {</p>
+<p class="p1"><span class="Apple-converted-space">            </span>width: 100%; /* Ocupan todo el ancho */</p>
+<p class="p1"><span class="Apple-converted-space">            </span>margin-bottom: 5px;</p>
+<p class="p1"><span class="Apple-converted-space">        </span>}</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">        </span>/* 3. BOTONES DE ACCIÓN */</p>
+<p class="p1"><span class="Apple-converted-space">        </span>.task-buttons {</p>
+<p class="p1"><span class="Apple-converted-space">            </span>flex-direction: column; /* Apila los grupos de botones */</p>
+<p class="p1"><span class="Apple-converted-space">            </span>gap: 15px;<span class="Apple-converted-space"> </span></p>
+<p class="p1"><span class="Apple-converted-space">        </span>}</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">        </span>/* 4. LISTA DE TAREAS (LI) - Crucial para botones */</p>
+<p class="p1"><span class="Apple-converted-space">        </span>#taskList li &gt; div {</p>
+<p class="p1"><span class="Apple-converted-space">            </span>flex-direction: column; /* Apila el texto y los botones */</p>
+<p class="p1"><span class="Apple-converted-space">            </span>align-items: flex-start;</p>
+<p class="p1"><span class="Apple-converted-space">        </span>}</p>
+<p class="p1"><span class="Apple-converted-space">        </span>#taskList li span {</p>
+<p class="p1"><span class="Apple-converted-space">            </span>margin-bottom: 5px; /* Espacio después del texto de la tarea */</p>
+<p class="p1"><span class="Apple-converted-space">            </span>display: block;</p>
+<p class="p1"><span class="Apple-converted-space">            </span>width: 100%; /* Asegura que ocupe todo el ancho para el tap */</p>
+<p class="p1"><span class="Apple-converted-space">            </span>cursor: pointer;</p>
+<p class="p1"><span class="Apple-converted-space">        </span>}</p>
+<p class="p1"><span class="Apple-converted-space">        </span>#taskList li &gt; div &gt; div {</p>
+<p class="p1"><span class="Apple-converted-space">            </span>/* Contenedor de botones (Editar, Iniciar/Detener, Eliminar) */</p>
+<p class="p1"><span class="Apple-converted-space">            </span>display: flex;</p>
+<p class="p1"><span class="Apple-converted-space">            </span>flex-wrap: wrap; /* Envuelve los botones si no caben */</p>
+<p class="p1"><span class="Apple-converted-space">            </span>margin-top: 5px;</p>
+<p class="p1"><span class="Apple-converted-space">            </span>width: 100%;</p>
+<p class="p1"><span class="Apple-converted-space">        </span>}</p>
+<p class="p1"><span class="Apple-converted-space">        </span>#taskList li &gt; div &gt; div button {</p>
+<p class="p1"><span class="Apple-converted-space">            </span>margin: 3px 5px 3px 0; /* Espaciado más compacto */</p>
+<p class="p1"><span class="Apple-converted-space">        </span>}</p>
+<p class="p2"><span class="Apple-converted-space">        </span></p>
+<p class="p1"><span class="Apple-converted-space">        </span>/* 5. CALENDARIO */</p>
+<p class="p1"><span class="Apple-converted-space">        </span>.calendar {</p>
+<p class="p1"><span class="Apple-converted-space">            </span>grid-template-columns: repeat(3, 1fr); /* Muestra 3 columnas en lugar de 5 en móvil */</p>
+<p class="p1"><span class="Apple-converted-space">        </span>}</p>
+<p class="p1"><span class="Apple-converted-space">_ ... HASTA ... _ </span></p>
+<p class="p1"><span class="Apple-converted-space">                </span>&lt;/div&gt;</p>
+<p class="p1"><span class="Apple-converted-space">            </span>&lt;/div&gt;</p>
+<p class="p2"><span class="Apple-converted-space">            </span></p>
+<p class="p1"><span class="Apple-converted-space">            </span>&lt;!-- ESTA ES LA LÍNEA MODIFICADA --&gt;</p>
+<p class="p1"><span class="Apple-converted-space">            </span>&lt;p id="recordingTimer" style="margin-top: 10px; text-align: right; display: none;"&gt;⏱️ Tiempo de grabación: 0 segundos&lt;/p&gt;</p>
+<p class="p1"><span class="Apple-converted-space">            </span>&lt;p id="statusMessage" style="color: blue;"&gt;Esperando inicio de sesión...&lt;/p&gt;</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">            </span>&lt;div style="margin-bottom: 15px; display: flex; align-items: center; gap: 10px; flex-wrap: wrap;"&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                </span>&lt;label for="sortSelector" style="font-weight: bold;"&gt;Ordenar por:&lt;/label&gt;</p>
+<p class="p1"><span class="Apple-converted-space">Read-only</span></p>
