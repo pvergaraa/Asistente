@@ -99,7 +99,7 @@
         font-weight: bold;
     }
 
-    /* Estilos para Etiqueta, Fecha, HORA y AVISO (MODIFICADO para 4 campos) */
+    /* Estilos para Etiqueta, Fecha, HORA y AVISO */
     .task-inputs-row {
         display: flex; 
         gap: 10px;  
@@ -109,7 +109,7 @@
     .task-inputs-row select,
     .task-inputs-row input[type="date"],
     .task-inputs-row input[type="time"],
-    #alertMinutes { /* NUEVO: #alertMinutes */
+    #alertMinutes { 
         width: 25%; /* Dividimos el espacio entre 4 elementos */
         margin: 0;  
     }
@@ -155,7 +155,7 @@
         color: orange;
     }
 
-    /* === ESTILOS PARA EL TIME TRACKING ACTIVO (1.2) === */
+    /* === ESTILOS PARA EL TIME TRACKING ACTIVO === */
     @keyframes pulse-active {
         0% { box-shadow: 0 0 5px rgba(56, 142, 60, 0.4); }
         50% { box-shadow: 0 0 10px rgba(56, 142, 60, 0.8); }
@@ -166,9 +166,40 @@
         border: 2px solid #388e3c; /* Borde verde oscuro */
         animation: pulse-active 2s infinite;
     }
+    
+    /* === ESTILOS PARA EL MODAL DE ALERTA DE TIEMPO (POP-UP) === */
+    #timeAlertModal {
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        z-index: 1000; /* Asegura que esté por encima de todo */
+        padding: 30px;
+        background: #ff4d4d; /* Rojo llamativo */
+        color: white;
+        border-radius: 10px;
+        box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+        text-align: center;
+        font-size: 1.5em;
+        font-weight: bold;
+        display: none; /* Oculto por defecto */
+        animation: pulse-alert 0.5s infinite alternate; /* Animación de pulsación */
+        max-width: 90%; /* Limita el tamaño en móvil */
+        min-width: 300px;
+    }
+    #timeAlertModal button {
+        background: #d32f2f;
+        color: white;
+        margin-top: 15px;
+        padding: 10px 20px;
+    }
+    @keyframes pulse-alert {
+        from { opacity: 1; }
+        to { opacity: 0.8; background: #ff7878; }
+    }
     /* ======================================================= */
 
-    /* === MEDIA QUERIES PARA RESPONSIVIDAD (Paso 2) === */
+    /* === MEDIA QUERIES PARA RESPONSIVIDAD === */
     @media (max-width: 768px) {
         body {
             padding: 0 10px; /* Reduce padding lateral */
@@ -191,7 +222,7 @@
         .task-inputs-row select,
         .task-inputs-row input[type="date"],
         .task-inputs-row input[type="time"],
-        #alertMinutes { /* NUEVO: #alertMinutes */
+        #alertMinutes { 
             width: 100%; /* Ocupan todo el ancho */
             margin-bottom: 5px;
         }
@@ -418,6 +449,11 @@
             <div id="searchResults" class="mt-4"></div>
         </section>
     
+    </div>
+
+    <div id="timeAlertModal">
+        <p id="modalAlertText">ALERTA DE TAREA</p>
+        <button onclick="document.getElementById('timeAlertModal').style.display='none';">Entendido</button>
     </div>
 
 <script>
@@ -714,7 +750,7 @@
     }
 
     // ----------------------------------------------------------------------
-    // ⏰ FUNCIONES DE NOTIFICACIONES DE TIEMPO ⏰
+    // ⏰ FUNCIONES DE NOTIFICACIONES DE TIEMPO (ALERTAS) ⏰
     // ----------------------------------------------------------------------
 
     function startNotificationChecker() {
@@ -741,10 +777,10 @@
         tasks.filter(t => !t.done && t.date && t.time && (t.alertMinutes === undefined || t.alertMinutes > 0)).forEach(t => {
             
             // Usar 15 minutos por defecto si no está definido, o el valor guardado
-            const minutesToAlert = t.alertMinutes !== undefined ? t.alertMinutes : 15; // <-- MODIFICADO
+            const minutesToAlert = t.alertMinutes !== undefined ? t.alertMinutes : 15; 
             
             // El tiempo de aviso en milisegundos
-            const alertTimeMs = minutesToAlert * 60 * 1000; // <-- MODIFICADO
+            const alertTimeMs = minutesToAlert * 60 * 1000; 
 
             // 1. Crear el objeto Date completo para la tarea
             const [year, month, day] = t.date.split('-').map(Number);
@@ -765,7 +801,7 @@
                     return; 
                 }
                 
-                // 4. Mostrar la alerta visual y de notificación
+                // 4. Mostrar la alerta visual, Modal y de notificación
                 showTimeAlert(t, timeDifference);
                 
                 // 5. Marcar la tarea como alertada temporalmente (no se guarda en Firebase, es solo para el runtime)
@@ -774,20 +810,34 @@
         });
     }
 
-    // Muestra la alerta visual y usa la API de Notificaciones del navegador
+    // MODIFICADO: Añadida la lógica del MODAL (POP-UP)
     function showTimeAlert(task, timeDifference) {
         const minutesLeft = Math.ceil(timeDifference / 60000); // Redondear hacia arriba
         const alertMsg = `¡ALERTA! La tarea: "${task.text}" (${task.time}) debe iniciar en ${minutesLeft} minutos.`;
         
-        // 1. Alerta temporal en el status
+        // 1. Alerta temporal en el status (sigue siendo útil)
         statusMessage.style.color = 'red';
         statusMessage.innerText = alertMsg;
         setTimeout(() => {
             statusMessage.style.color = 'blue';
             statusMessage.innerText = "Cargado desde la nube."; 
-        }, 15000); // Mantener el aviso 15 segundos
+        }, 15000); 
 
-        // 2. (Opcional) Notificación del navegador
+        // 2. NUEVO: Mostrar Modal Flotante (POP-UP llamativo)
+        const modal = document.getElementById('timeAlertModal');
+        const modalText = document.getElementById('modalAlertText');
+        modalText.innerText = alertMsg;
+        modal.style.display = 'block';
+
+        // 3. Ocultar el modal automáticamente después de 10 segundos
+        setTimeout(() => {
+            // Solo ocultar si el usuario no lo cerró manualmente antes
+            if (modal.style.display === 'block') {
+                modal.style.display = 'none';
+            }
+        }, 10000); 
+
+        // 4. Notificación del navegador
         if (window.Notification) {
             Notification.requestPermission().then(permission => {
                 if (permission === 'granted') {
@@ -890,13 +940,13 @@
         const taskInput = document.getElementById('taskInput');
         const taskTag = document.getElementById('taskTag');
         const taskTime = document.getElementById('taskTime'); 
-        const alertMinutes = document.getElementById('alertMinutes'); // <-- NUEVA LÍNEA
+        const alertMinutes = document.getElementById('alertMinutes'); 
         const addTaskBtn = document.getElementById('addTaskBtn');
         
         taskInput.value = '';
         taskTag.value = ''; // Limpiar etiqueta
         taskTime.value = ''; // Limpiar hora
-        alertMinutes.value = '15'; // <-- Resetear a 15 minutos (por defecto)
+        alertMinutes.value = '15'; // Resetear a 15 minutos (por defecto)
         initializeDateInput(); // Restablecer fecha a la de hoy
         
         editingTaskId = null;
@@ -909,7 +959,7 @@
         const taskTag = document.getElementById('taskTag');
         const taskDate = document.getElementById('taskDate');
         const taskTime = document.getElementById('taskTime'); 
-        const alertMinutes = document.getElementById('alertMinutes'); // <-- NUEVA LÍNEA
+        const alertMinutes = document.getElementById('alertMinutes'); 
         const addTaskBtn = document.getElementById('addTaskBtn');
 
         const taskToEdit = tasks.find(t => t.id === taskId);
@@ -924,7 +974,7 @@
         taskTag.value = taskToEdit.tag || '';
         taskDate.value = taskToEdit.date;
         taskTime.value = taskToEdit.time || ''; 
-        alertMinutes.value = taskToEdit.alertMinutes !== undefined ? taskToEdit.alertMinutes.toString() : '15'; // <-- Cargar minutos de alerta
+        alertMinutes.value = taskToEdit.alertMinutes !== undefined ? taskToEdit.alertMinutes.toString() : '15'; // Cargar minutos de alerta
         
         // 2. Preparar el sistema para la edición
         editingTaskId = taskId;
@@ -939,13 +989,13 @@
         const taskInput = document.getElementById('taskInput');
         const taskDateInput = document.getElementById('taskDate'); 
         const taskTimeInput = document.getElementById('taskTime'); 
-        const alertMinutesInput = document.getElementById('alertMinutes'); // <-- NUEVA LÍNEA
+        const alertMinutesInput = document.getElementById('alertMinutes'); 
         
         const taskText = text || taskInput.value;
         const tag = document.getElementById('taskTag').value;
         const date = taskDateInput.value; 
         const time = taskTimeInput.value; 
-        const alertMinutes = parseInt(alertMinutesInput.value, 10); // <-- NUEVA LÍNEA
+        const alertMinutes = parseInt(alertMinutesInput.value, 10); 
         
         if (taskText.trim()) {
             
@@ -955,9 +1005,9 @@
                 if (taskIndex !== -1) {
                     tasks[taskIndex].text = taskText.trim();
                     tasks[taskIndex].tag = tag;
-                    tasks[taskIndex].date = date; 
-                    tasks[taskIndex].time = time; 
-                    tasks[taskIndex].alertMinutes = alertMinutes; // <-- Guardar minutos de alerta
+                    tasks[index].date = date; 
+                    tasks[index].time = time; 
+                    tasks[index].alertMinutes = alertMinutes; // Guardar minutos de alerta
                     showSuccessBanner('Tarea actualizada exitosamente.');
                 }
             } else {
@@ -968,7 +1018,7 @@
                     tag, 
                     date, 
                     time, 
-                    alertMinutes, // <-- Guardar minutos de alerta
+                    alertMinutes, // Guardar minutos de alerta
                     done: false,
                     startTime: null,      
                     elapsedTime: 0      
