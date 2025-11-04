@@ -390,8 +390,8 @@
 	// ----------------------------------------------------------------------
 	// ⚠️ ⚙️ CONFIGURACIÓN DE FIREBASE (¡IMPORTANTE!) ⚙️ ⚠️
 	// ----------------------------------------------------------------------
-	// DEBES REEMPLAZAR LA CONFIGURACIÓN DE ABAJO CON TUS CREDENCIALES REALES.
-	// Si no lo haces, la aplicación NO SE CONECTARÁ.
+	// DEBES REEMPLAZAR LA CONFIGURACIÓN DE ABAJO CON TUS CREDENCIALES REALES
+	// PARA QUE LA APLICACIÓN PUEDA CONECTARSE.
 	const firebaseConfig = {
 		// [TUS CREDENCIALES DE FIREBASE AQUÍ]
 		// Ejemplo (BORRA ESTO Y USA TUS DATOS):
@@ -665,7 +665,7 @@
 		recognition.onstart = function() {
 			statusMessage.style.color = '#1976d2'; // Azul
 			statusMessage.innerText = '🎙️ Escuchando... Di tu tarea.';
-			// Lógica del contador eliminada aquí.
+			// Lógica del contador de tiempo ELIMINADA.
 		};
 		
 		recognition.onresult = function(event) {
@@ -673,17 +673,17 @@
 			document.getElementById('taskInput').value = transcript;
 			statusMessage.style.color = 'green';
 			statusMessage.innerText = '✅ Dictado finalizado. Texto listo para agregar.';
-			// Lógica del contador eliminada aquí.
+			// Lógica de limpieza del contador ELIMINADA.
 		};
 		
 		recognition.onerror = function(event) {	
-			// Lógica del contador eliminada aquí.
+			// Lógica de limpieza y error del contador ELIMINADA.
 			statusMessage.style.color = 'red';
 			statusMessage.innerText = `❌ Error en el dictado: ${event.error}`;
 		};
 		
 		recognition.onend = function() {	
-			// Lógica del contador eliminada aquí.
+			// Lógica de finalización del contador ELIMINADA.
 		};
 		
 		try {
