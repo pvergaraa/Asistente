@@ -336,10 +336,10 @@
                 <input id="taskDate" type="date"/> 
                 <input id="taskTime" type="time" title="Hora para el recordatorio (Opcional)"/> 
                 <select id="alertMinutes" title="Minutos de aviso previo a la hora">
-                    <option value="0" Selected>Sin Aviso</option>
+                    <option value="0">Sin Aviso</option>
                     <option value="5">Avisar 5 min antes</option>
                     <option value="10">Avisar 10 min antes</option>
-                    <option value="15">Avisar 15 min antes</option>
+                    <option value="15" selected>Avisar 15 min antes</option>
                     <option value="30">Avisar 30 min antes</option>
                     <option value="60">Avisar 1 hora antes</option>
                 </select>
@@ -984,7 +984,7 @@
         window.scrollTo({ top: 0, behavior: 'smooth' });
     }
 
-    // MODIFICADO: Añadida la validación de fecha/hora pasada
+    // MODIFICADO: Añadida la validación de fecha/hora pasada y la LIMPIEZA DE CAMPOS TRAS FALLO
     function addTask(text = null) {
         if (!auth.currentUser) return;
 
@@ -1004,7 +1004,6 @@
         // =========================================================
         if (date && time) { 
             // 1. Combina la fecha y hora seleccionadas en un único objeto Date
-            // El formato "YYYY-MM-DDTHH:mm:ss" asegura un parsing correcto considerando la zona horaria local.
             const taskDateTimeStr = `${date}T${time}:00`;
             const taskDateTime = new Date(taskDateTimeStr);
             
@@ -1012,9 +1011,14 @@
             const now = new Date();
             
             // 3. Comprueba si la hora de la tarea es anterior a la actual
-            // Se resta un margen de 60 segundos (60*1000ms) para evitar problemas de microsegundos al crear la tarea.
             if (taskDateTime.getTime() < now.getTime() - (60 * 1000)) { 
                 alert('🚫 Error de programación: No puedes asignar una hora anterior a la actual a una tarea (se requiere una hora futura). Por favor, revisa la fecha y la hora.');
+                
+                // === NUEVO: LIMPIEZA DE CAMPOS TRAS FALLO ===
+                taskTimeInput.value = ''; // Limpia el campo de hora
+                initializeDateInput();    // Restablece la fecha a HOY
+                // ==========================================
+                
                 return; // Detiene la función y evita que se cree la tarea.
             }
         }
